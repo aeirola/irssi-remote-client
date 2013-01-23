@@ -16,9 +16,10 @@ At the moment the client listens to port 10000, and reacts to the following comm
 Usage example
 -------------
 * `/script load irssi-client-api`
-* `nc localhost 10000`
+* `nc localhost 10000` or `socat - UNIX-CLIENT:client.socket`
 * `windows`
 * `bye`
+
 
 
 Known issues

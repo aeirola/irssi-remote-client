@@ -4,7 +4,8 @@ use strict;
 
 use Irssi;      # For interfacign with irssi
 use IO::Socket; # For TCP connections
-use JSON;       # For priducing JSON output
+use Cwd;
+#use JSON;       # For priducing JSON output
 use Fcntl;          # provides `O_NONBLOCK' and `O_RDONLY' constants
 
 use vars qw($VERSION %IRSSI);
@@ -29,10 +30,11 @@ our($server,            # Stores the server filehandle
 );
 
 sub add_settings {
-    Irssi::settings_add_int('client', 'client_port', 10000);
-    Irssi::settings_add_str('client', 'client_password', 's3cr3t');
-    Irssi::settings_add_str('client', 'client_fifo', '~/.irssi/client.fifo');
-    Irssi::settings_add_str('client', 'client_mode', 'fifo');
+    Irssi::settings_add_int('client', 'client_tcp_port', 10000);
+    #Irssi::settings_add_str('client', 'client_password', 's3cr3t');
+    Irssi::settings_add_str('client', 'client_ipc_file', 'client.socket');
+    Irssi::settings_add_str('client', 'client_fifo_file', 'client.fifo');
+    Irssi::settings_add_str('client', 'client_mode', 'ipc');
 }
 
 sub setup {
@@ -43,9 +45,11 @@ sub setup {
     if ($mode eq 'fifo') {
         setup_fifo();
     } elsif ($mode eq 'tcp') {
-        setup_tcp();
+        setup_tcp_socket();
+    } elsif ($mode eq 'ipc') {
+        setup_ipc_socket();
     } else {
-        Irssi::print "Unkown client_mode $mode, please set to either 'fifo' or 'tcp'.";
+        Irssi::print "Unkown client_mode $mode, please set to 'fifo', 'ipc' or 'tcp'.";
     }
 }
 
@@ -53,7 +57,7 @@ sub setup {
 #   FIFO handling
 ##
 sub setup_fifo() {
-    my $fifo_path = Irssi::settings_get_str('client_fifo');
+    my $fifo_path = get_path(Irssi::settings_get_str('client_fifo_file'));
     create_fifo($fifo_path);
     open_fifo($fifo_path);
     Irssi::print("%B>>%n Client api set up in fifo mode", MSGLEVEL_CLIENTCRAP);
@@ -95,26 +99,48 @@ sub destroy_fifo() {
 
 
 ##
-#   TCP handling
+#   Socket handling
 ##
-sub setup_tcp() {
-    my $server_port = Irssi::settings_get_int('client_port');
+sub setup_tcp_socket() {
+    open_tcp_socket();
+    listen_socket();
+    Irssi::print("%B>>%n Client api set up in tcp mode", MSGLEVEL_CLIENTCRAP);
+}
+
+sub open_tcp_socket() {
+    my $server_port = Irssi::settings_get_int('client_tcp_port');
     $server = IO::Socket::INET->new(LocalPort => $server_port,
                                     Type      => SOCK_STREAM,
                                     Reuse     => 1,
-                                    Listen    => 10 )   # or SOMAXCONN
+                                    Listen    => 2 )
         or die "Couldn't be a tcp server on port $server_port : $@\n";
-    
+}
+
+sub setup_ipc_socket() {
+    open_ipc_socket();
+    listen_socket();
+    Irssi::print("%B>>%n Client api set up in ipc mode", MSGLEVEL_CLIENTCRAP);
+}
+
+sub open_ipc_socket() {
+    my $socket_file = get_path(Irssi::settings_get_str('client_ipc_file'));
+    unlink($socket_file);
+    $server = IO::Socket::UNIX->new(Local  => $socket_file,
+                                    Type   => SOCK_STREAM,
+                                    Listen => 1 )
+        or die "Couldn't be a ipc server on file $socket_file : $@\n";
+}
+
+sub listen_socket() {
     print "Server at " . fileno($server);
     # Add handler for server connections
     $server_tag = Irssi::input_add(fileno($server),
                                    Irssi::INPUT_READ,
-                                   \&handle_tcp_connection, '');
-    Irssi::print("%B>>%n Client api set up in tcp mode", MSGLEVEL_CLIENTCRAP);
+                                   \&handle_socket_connection, '');
 }
 
-sub handle_tcp_connection() {
-    destroy_tcp_client();
+sub handle_socket_connection() {
+    destroy_socket_client();
     $client = $server->accept();
     
     print "Client connected at " . fileno($client);
@@ -123,38 +149,38 @@ sub handle_tcp_connection() {
     # Add handler for client messages
     $client_tag = Irssi::input_add(fileno($client),
                                    Irssi::INPUT_READ,
-                                   \&handle_tcp_message, '');
+                                   \&handle_socket_message, '');
 }
 
-sub handle_tcp_message() {
+sub handle_socket_message() {
     my $msg;
     $client->recv($msg, 1024);
     if ($msg =~ /^bye$/ or $msg eq "" ) {
         print $client "Thankyoucomeagain\n";
-        destroy_tcp_client();
+        destroy_socket_client();
     } else {
         my @args = ($msg, $client);
         perform_command(\@args);
     }
 }
 
-sub destroy_tcp_client() {
+sub destroy_socket_client() {
     Irssi::input_remove($client_tag);
     if (defined $client) {
         close($client);
     }
 }
 
-sub destroy_tcp_server() {
+sub destroy_socket_server() {
     Irssi::input_remove($server_tag);
     if (defined $server) {
         close($server);
     }
 }
 
-sub destroy_tcp() {
-    destroy_tcp_client();
-    destroy_tcp_server();
+sub destroy_socket() {
+    destroy_socket_client();
+    destroy_socket_server();
 }
 
 ##
@@ -164,25 +190,37 @@ sub perform_command($) {
     my $args = shift;
     my ($msg, $write) = @$args;
     
+    # Debug, write every processed command
     Irssi::print(
         "%B>>%n $IRSSI{name} received command: \"$msg\"",
         MSGLEVEL_CLIENTCRAP);
     
     if ($msg =~ /^windows$/) {
+        # List all windows
         foreach (Irssi::windows()) {
             print $write $_->{refnum} . " " . $_->{name} . "\n";
         }
-    } elsif ($msg =~ /^active_window$/) {
-        my $win = Irssi::active_win();
-        print $write $win->{refnum} . " " . $win->{name} . "\n";
+    } elsif ($msg =~ /^say ([0-9]+) (.*)$/) {
+        # Say to channel on window
+        Irssi::window_find_refnum($1)->command("msg * $2");
     } else {
-        print $write "echo: " . $msg;
+        # Echo failed
+        print $write "fail: " . $msg;
     }
 }
 
+##
+#   Misc stuff
+##
 sub teardown() {
-    destroy_tcp();
+    destroy_socket();
     destroy_fifo();
+}
+
+
+sub get_path($) {
+    my ($relative_path) = @_;
+    return Cwd::abs_path(Irssi::get_irssi_dir() . "/$relative_path");
 }
 
 # Setup on load
