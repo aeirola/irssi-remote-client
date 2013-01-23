@@ -5,7 +5,7 @@ use CGI;
 use IO::Socket;
 
 # Define the socket file
-my $socket_file = "/Users/aeirola/.irssi/client.socket";
+my $socket_file = "/home/users/aeirola/.irssi/client.socket";
 
 # Create CGI object
 my $q = CGI->new;
@@ -21,11 +21,11 @@ print $q->header(-type=>'text',
 # Open socket
 my $sock = IO::Socket::UNIX->new(Peer   => $socket_file,
                                  Type   => SOCK_STREAM)
-            or die "Couldn't open socket to $socket_file";
+            or print "Couldn't open socket to $socket_file";
 
 # Write to socket
 print $sock "$cmd\n" 
-    or die "Couldn't write command to socket";
+    or print "Couldn't write command to socket";
 
 # Read response
 LOOP: while (<$sock>) {
@@ -33,10 +33,12 @@ LOOP: while (<$sock>) {
         # Close on empty line
         last LOOP;
     } else {
-        print $_ or die "Couldn't write response";
+        print $_;
     }
 }
 
 # Clean up
-print $sock "bye\n" or die "Couldn't end connection cleanly";
-close($sock) or die "Couldn't close socket";
+print $sock "bye\n" or print "Couldn't end connection cleanly";
+close($sock) or print "Couldn't close socket";
+
+exit;
