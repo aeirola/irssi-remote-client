@@ -144,7 +144,7 @@ sub handle_socket_connection() {
     $client = $server->accept();
     
     print "Client connected at " . fileno($client);
-    print $client "You have connected to irssi-client-script\n";
+    print $client "This is irssi-client-script\n";
     
     # Add handler for client messages
     $client_tag = Irssi::input_add(fileno($client),
@@ -189,7 +189,7 @@ sub destroy_socket() {
 sub perform_command($) {
     my $args = shift;
     my ($msg, $write) = @$args;
-    
+
     # Debug, write every processed command
     Irssi::print(
         "%B>>%n $IRSSI{name} received command: \"$msg\"",
@@ -202,11 +202,20 @@ sub perform_command($) {
         }
     } elsif ($msg =~ /^say ([0-9]+) (.*)$/) {
         # Say to channel on window
-        Irssi::window_find_refnum($1)->command("msg * $2");
+        my $window = Irssi::window_find_refnum($1);
+        if ($window) {
+            print $write $window->command("msg * $2");
+        } else {
+            print $write "Window $1 not found\n";
+        }
     } else {
         # Echo failed
         print $write "fail: " . $msg;
     }
+    
+    # End output with empty line
+    print $write "\n";
+    print $write "\n";
 }
 
 ##
