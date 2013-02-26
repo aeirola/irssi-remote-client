@@ -2,11 +2,10 @@
 
 use strict;
 
-use Irssi;      # For interfacign with irssi
-use IO::Socket; # For TCP connections
-use Cwd;
-#use JSON;       # For priducing JSON output
-use Fcntl;          # provides `O_NONBLOCK' and `O_RDONLY' constants
+use Irssi;          # Interfacing with irssi
+use Irssi::TextUI;  # Accessing scrollbacks
+use IO::Socket;     # TCP connections
+use JSON;           # Producing JSON output
 
 use vars qw($VERSION %IRSSI);
 
@@ -74,7 +73,6 @@ sub handle_socket_connection() {
     $client = $server->accept();
     
     print "Client connected at " . fileno($client);
-    #print $client "This is irssi-client-script\n";
     
     # Add handler for client messages
     $client_tag = Irssi::input_add(fileno($client),
@@ -85,13 +83,9 @@ sub handle_socket_connection() {
 sub handle_socket_message() {
     my $msg;
     $client->recv($msg, 1024);
-    my ($url, $headers, $data) = $msg =~ /^GET \/([^ ]+) HTTP[^\n]+\n(.*)$/s;
-    print "URL: $url";
-    print "Headers: $headers";
-    print "Data: $data";
+    my ($cmd, $url, $headers, $data) = $msg =~ /^(GET|POST) ([^ ]+) HTTP\/[^\n]+\n(.*)$/s;
     print $client "HTTP/1.1 200 OK\n\n";
-    $url =~ s/\// /g;
-    my @args = ($url, $data, $client);
+    my @args = ($cmd, $url, $data, $client);
     perform_command(\@args);
 
     destroy_socket_client();
@@ -121,34 +115,101 @@ sub destroy_socket() {
 ##
 sub perform_command($) {
     my $args = shift;
-    my ($msg, $data, $write) = @$args;
+    my ($cmd, $url, $data, $out) = @$args;
 
     # Debug, write every processed command
     Irssi::print(
-        "%B>>%n $IRSSI{name} received command: \"$msg\"",
+        "%B>>%n $IRSSI{name} received command: $cmd $url $data",
         MSGLEVEL_CLIENTCRAP);
     
-    if ($msg =~ /^windows$/) {
+    my $json;
+
+    if ($cmd = "GET" && $url =~ /^\/windows\/?$/) {
         # List all windows
+        $json = [];
         foreach (Irssi::windows()) {
-            print $write $_->{refnum} . " " . $_->{name} . "\n";
+            my $window = $_;
+            my @items = $window->items();
+            my $item = $items[0];
+
+            my $windowJson = {
+                "refnum" => $window->{refnum},
+                "type" => $item->{type} || "EMPTY",
+                "name" => $item->{name} || $window->{name},
+                "topic" => $item->{topic}
+            };
+            push(@$json, $windowJson);
         }
-    } elsif ($msg =~ /^say ([0-9]+) (.*)$/) {
+    } elsif ($cmd = "GET" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
+        my $window = Irssi::window_find_refnum($1);
+        if ($window) {
+            my @items = $window->items();
+            my $item = $items[0];
+
+            $json = {
+                "refnum" => $window->{refnum},
+                "type" => $item->{type} || "EMPTY",
+                "name" => $item->{name} || $window->{name},
+                "topic" => $item->{topic}
+            };
+
+            # Nicks
+            if ($item->{TYPE}) {
+                my $nicksJson = [];
+                my @nicks = $item->nicks();
+                foreach (@nicks) {
+                    push(@$nicksJson, $_->{nick});
+                }
+                $json->{'nicks'} = $nicksJson;
+            }
+
+            # Scrollback            
+            my $view = $window->view;
+            my $line = $view->get_lines();
+            my $linesJson = [];
+            while($line) {
+                push(@$linesJson, $line->get_text(0));
+                $line = $line->next();
+            }
+            $json->{'lines'} = $linesJson;
+
+            # Alternative version for limiting
+            #my $buffer = $view->{buffer};
+            #my $line = $buffer->{cur_line};
+            #while($line) {
+            #    print $out $line->get_text(0) . "\n";
+            #    $line = $line->prev();
+            #}
+        }
+    } elsif ($cmd = "POST" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
         # Say to channel on window
         my $window = Irssi::window_find_refnum($1);
         if ($window) {
-            print $write $window->command("msg * $2");
+            my @items = $window->items();
+            my $item = $items[0];
+            if ($item->{type}) {
+                $item->command("msg * $2");
+            } else {
+                $item->print($2);
+            }
         } else {
-            print $write "Window $1 not found\n";
+            print $out "Window $1 not found\n";
         }
     } else {
-        # Echo failed
-        print $write "fail: " . $msg;
+        $json = {
+            "GET" => {
+                "windows" => "List all windows",
+                "windows/[window_id]" => "List window content"
+            },
+            "POST" => {
+                "windows/[id]" => "Post message to window"
+            }
+        };
     }
-    
-    # End output with empty line
-    print $write "\n";
-    print $write "\n";
+
+    if ($json) {
+        print $out to_json($json, {utf8 => 1, pretty => 1});
+    }
 }
 
 ##

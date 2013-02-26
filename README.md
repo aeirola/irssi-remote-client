@@ -20,6 +20,18 @@ Usage example
 * `windows`
 * `bye`
 
+REST API
+-----------
+
+GET /windows
+Returns an list of window objects including the number, name and channel
+
+GET /window/[number]
+Returns window information with nicks and lines and stuff
+
+POST /windows/[number]
+Writes a line to the given window number
+
 
 
 Known issues
