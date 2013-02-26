@@ -72,7 +72,7 @@ sub handle_socket_connection() {
     destroy_socket_client();
     $client = $server->accept();
     
-    print "Client connected at " . fileno($client);
+    #print "Client connected at " . fileno($client);
     
     # Add handler for client messages
     $client_tag = Irssi::input_add(fileno($client),
@@ -83,10 +83,19 @@ sub handle_socket_connection() {
 sub handle_socket_message() {
     my $msg;
     $client->recv($msg, 1024);
-    my ($cmd, $url, $headers, $data) = $msg =~ /^(GET|POST) ([^ ]+) HTTP\/[^\n]+\n(.*)$/s;
-    print $client "HTTP/1.1 200 OK\n\n";
-    my @args = ($cmd, $url, $data, $client);
-    perform_command(\@args);
+    #my ($cmd, $url, $data) = $msg =~ /^(GET|POST) ([^ ]+) HTTP\/[^\n]+(?:[^\n]+\n)*\n(.*)$/s;
+    my ($cmd, $url, $data) = $msg =~ /^(GET|POST) ([^ ]+) HTTP\/[^\n]+\n(?:[^\n]+\n)*(.+)$/sm;
+    if ($cmd) {
+        print $client "HTTP/1.1 200 OK\n";
+        print $client "Content-Type: application/json\n";
+        print $client "Access-Control-Allow-Origin: *\n";
+        print $client "\n";
+        my @args = ($cmd, $url, $data, $client);
+        perform_command(\@args);
+    } else {
+        print $client "HTTP/1.1 500 OK\n";
+        print $client "\n";
+    }
 
     destroy_socket_client();
 }
@@ -124,7 +133,7 @@ sub perform_command($) {
     
     my $json;
 
-    if ($cmd = "GET" && $url =~ /^\/windows\/?$/) {
+    if ($cmd eq "GET" && $url =~ /^\/windows\/?$/) {
         # List all windows
         $json = [];
         foreach (Irssi::windows()) {
@@ -140,7 +149,7 @@ sub perform_command($) {
             };
             push(@$json, $windowJson);
         }
-    } elsif ($cmd = "GET" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
+    } elsif ($cmd eq "GET" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
         my $window = Irssi::window_find_refnum($1);
         if ($window) {
             my @items = $window->items();
@@ -154,7 +163,7 @@ sub perform_command($) {
             };
 
             # Nicks
-            if ($item->{TYPE}) {
+            if ($item->{type}) {
                 my $nicksJson = [];
                 my @nicks = $item->nicks();
                 foreach (@nicks) {
@@ -164,36 +173,42 @@ sub perform_command($) {
             }
 
             # Scrollback            
-            my $view = $window->view;
-            my $line = $view->get_lines();
             my $linesJson = [];
-            while($line) {
-                push(@$linesJson, $line->get_text(0));
-                $line = $line->next();
-            }
-            $json->{'lines'} = $linesJson;
+            my $view = $window->view;
 
-            # Alternative version for limiting
-            #my $buffer = $view->{buffer};
-            #my $line = $buffer->{cur_line};
+            #my $line = $view->get_lines();
             #while($line) {
-            #    print $out $line->get_text(0) . "\n";
-            #    $line = $line->prev();
+            #    push(@$linesJson, $line->get_text(0));
+            #    $line = $line->next();
             #}
+            
+            # Alternative version for limiting
+            my $buffer = $view->{buffer};
+            my $line = $buffer->{cur_line};
+            my $count = 100;
+            while($line && $count) {
+                push(@$linesJson, $line->get_text(0));
+                $line = $line->prev();
+                $count--;
+            }
+
+            $json->{'lines'} = $linesJson;
         }
-    } elsif ($cmd = "POST" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
+
+    } elsif ($cmd eq "POST" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
+        # Skip empty lines
+        return if $data =~ /^\s$/;
+
         # Say to channel on window
         my $window = Irssi::window_find_refnum($1);
         if ($window) {
             my @items = $window->items();
             my $item = $items[0];
             if ($item->{type}) {
-                $item->command("msg * $2");
+                $item->command("msg * $data");
             } else {
-                $item->print($2);
+                $window->print($data);
             }
-        } else {
-            print $out "Window $1 not found\n";
         }
     } else {
         $json = {

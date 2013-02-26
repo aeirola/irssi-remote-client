@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset='utf-8' />
+	<title>Irssi JS client (BETA)</title>
+	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js'></script>
+
+<script type="text/javascript">
+$(document).ready(onReady);
+
+var windowNumber = 1;
+var baseUrl = 'http://localhost:10000'
+
+function onReady() { 'use strict';
+	getWindows();
+	var input = $('#input');
+	input.keypress(function(e) {
+		if (e.which == 13) {
+			sendMessage(input.val());
+			input.val("");
+		}
+	});
+	//setInterval(reloadWindow, 2000);
+}
+
+function getWindows() { 'use strict';
+	$.ajax({
+		type: 'GET',
+		url: baseUrl+'/windows',
+		dataType: 'json',
+		success: function(windows) {
+			var list = $("#windows");
+			$.each(windows, function() {
+				var item = $('<div>');
+				var win = this;
+				item.append($('<span>').append(win.refnum + ": " + win.name));
+				item.click(function() {
+					switchWindow(win.refnum);
+				});
+				list.append(item);
+			});
+			switchWindow(windows[windows.length-1].refnum);
+		}
+	});
+}
+
+function switchWindow(newWindowNumber) { 'use strict';
+	windowNumber = newWindowNumber;
+	reloadWindow();
+}
+
+function reloadWindow() { 'use strict';
+	$.ajax({
+		type: 'GET',
+		url: baseUrl+'/windows/'+windowNumber,
+		dataType: 'json',
+		success: function(win) {
+			$('#topic').html(win.topic);
+			$('#channelName').html(win.name);
+			var scrollback = $('#scrollback');
+			scrollback.empty();
+			$.each(win.lines, function() {
+				scrollback.append($('<span>').append(this));
+			});
+
+		}
+	});
+}
+
+function sendMessage(message) { 'use strict';
+	$.ajax({
+		type: 'POST',
+		url: baseUrl+'/windows/'+windowNumber,
+		data: message,
+		success: reloadWindow
+	});
+}
+
+</script>
+
+<style type="text/css">
+	html, body {
+		font-family: ;
+		height: 100%;
+		width: 100%;
+	}
+
+	#left {
+		height: 100%;
+		width: 20%;
+		float: left;
+		border-right: 1px dashed black;
+	}
+
+	#windows div {
+		padding: 1em;
+		border-bottom: 1px dotted black;
+	}
+
+	#right {
+		height: 100%;
+		width: 80%;
+		float: right;
+	}
+
+	#top {
+		height: 10%;
+		border-bottom: 1px dashed black;
+	}
+
+	#topic {
+		padding: 1em;
+	}
+
+	#scrollback {
+		height: 80%;
+		overflow: scroll;
+	}
+
+	#scrollback span {
+		padding: 0.1em;
+		float: left;
+		clear: both;
+	}
+
+	#bottom {
+		border-top: 1px dashed black;
+		height: 10%;
+	}
+
+	#channelName {
+		padding: 1em;
+	}
+
+	#channelName {
+		width: 20%;
+	}
+
+	#input {
+		width: 80%;
+	}
+</style>
+</head>
+<body>
+	<div id="left">
+		<div id="windows">
+
+		</div>
+	</div>
+	<div id="right">
+		<div id="top">
+			<span id="topic"></span>
+		</div>
+		<div id="scrollback">
+		</div>
+		<div id="bottom">
+			<span id="channelName"></span>
+			<input id="input" type="text" />
+		</div>
+	</div>
+</body>
+</html>
