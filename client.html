@@ -9,10 +9,10 @@
 $(document).ready(onReady);
 
 var windowNumber = 1;
-var baseUrl = ''
+var baseUrl = '.'
 
 function onReady() { 'use strict';
-	baseUrl = getParameterByName('url') || '';
+	baseUrl = getParameterByName('url') || '.';
 	getWindows();
 	var input = $('#input');
 	input.keypress(function(e) {
@@ -152,6 +152,11 @@ function sendMessage(message) { 'use strict';
 		border-bottom: 1px dashed black;
 	}
 
+	#github {
+		position: absolute;
+		right: 1em;
+	}
+
 	#scrollback {
 		position: absolute;
 		padding: 0.5em;
@@ -199,6 +204,7 @@ function sendMessage(message) { 'use strict';
 	<div id="right">
 		<div id="top">
 			<span id="topic"></span>
+			<span id="github"><a href="https://github.com/aeirola/irssi-client">GitHub</a></span>
 		</div>
 		<div id="scrollback">
 		</div>
