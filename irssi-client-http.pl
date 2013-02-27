@@ -83,7 +83,6 @@ sub handle_socket_connection() {
 sub handle_socket_message() {
     my $msg;
     $client->recv($msg, 1024);
-    #my ($cmd, $url, $data) = $msg =~ /^(GET|POST) ([^ ]+) HTTP\/[^\n]+(?:[^\n]+\n)*\n(.*)$/s;
     my ($cmd, $url, $data) = $msg =~ /^(GET|POST) ([^ ]+) HTTP\/[^\n]+\n(?:[^\n]+\n)*(.+)$/sm;
     if ($cmd) {
         print $client "HTTP/1.1 200 OK\n";
@@ -176,20 +175,25 @@ sub perform_command($) {
             my $linesJson = [];
             my $view = $window->view;
 
-            #my $line = $view->get_lines();
-            #while($line) {
-            #    push(@$linesJson, $line->get_text(0));
-            #    $line = $line->next();
-            #}
-            
             # Alternative version for limiting
             my $buffer = $view->{buffer};
             my $line = $buffer->{cur_line};
             my $count = 100;
-            while($line && $count) {
+
+            # Scroll backwards till count
+            while($count) {
+                if ($line->prev()) {
+                    $line = $line->prev();
+                    $count--;
+                } else {
+                    $count = 0;
+                }
+            }
+
+            # Scroll forwards till end
+            while($line) {
                 push(@$linesJson, $line->get_text(0));
-                $line = $line->prev();
-                $count--;
+                $line = $line->next();
             }
 
             $json->{'lines'} = $linesJson;

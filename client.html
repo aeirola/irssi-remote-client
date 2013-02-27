@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset='utf-8' />
+	<meta charset='utf-8'>
 	<title>Irssi JS client (BETA)</title>
 	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js'></script>
 
@@ -9,9 +9,10 @@
 $(document).ready(onReady);
 
 var windowNumber = 1;
-var baseUrl = 'http://localhost:10000'
+var baseUrl = ''
 
 function onReady() { 'use strict';
+	baseUrl = getParameterByName('url') || '';
 	getWindows();
 	var input = $('#input');
 	input.keypress(function(e) {
@@ -21,6 +22,18 @@ function onReady() { 'use strict';
 		}
 	});
 	//setInterval(reloadWindow, 2000);
+}
+
+function getParameterByName(name) {
+	name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+	var regexS = "[\\?&]" + name + "=([^&#]*)";
+	var regex = new RegExp(regexS);
+	var results = regex.exec(window.location.search);
+	if (results == null) {
+		return "";
+	} else {
+		return decodeURIComponent(results[1].replace(/\+/g, " "));
+	}
 }
 
 function getWindows() { 'use strict';
@@ -39,7 +52,7 @@ function getWindows() { 'use strict';
 				});
 				list.append(item);
 			});
-			switchWindow(windows[windows.length-1].refnum);
+			switchWindow(windows[0].refnum);
 		}
 	});
 }
@@ -62,6 +75,13 @@ function reloadWindow() { 'use strict';
 			$.each(win.lines, function() {
 				scrollback.append($('<span>').append(this));
 			});
+			scrollback.scrollTop(win.lines.length*20);
+
+			var nicks = $('#nicks');
+			nicks.empty();
+			$.each(win.nicks, function() {
+				nicks.append($('<div>').append(this));
+			});
 
 		}
 	});
@@ -83,37 +103,62 @@ function sendMessage(message) { 'use strict';
 		font-family: ;
 		height: 100%;
 		width: 100%;
+		padding: 0;
+		margin: 0;
 	}
 
 	#left {
-		height: 100%;
-		width: 20%;
-		float: left;
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 10em;
 		border-right: 1px dashed black;
 	}
 
+	#windows  {
+		padding: 0.5em;
+	}
+
 	#windows div {
-		padding: 1em;
-		border-bottom: 1px dotted black;
+		padding: 0.5em;
+		border-bottom: 1px dashed gray;
+	}
+
+	#nicks {
+		position: absolute;
+		bottom: 0;
+		width: 10em;
+		padding: 0.5em;
+	}
+
+	#nicks div {
+		padding: 0.1em;
 	}
 
 	#right {
-		height: 100%;
-		width: 80%;
-		float: right;
+		position: absolute;
+		left: 10em;
+		right: 0;
+		top: 0;
+		bottom: 0;
 	}
 
 	#top {
-		height: 10%;
+		position: absolute;
+		height: 1em;
+		left: 0;
+		right: 0;
+		padding: 1em;
 		border-bottom: 1px dashed black;
 	}
 
-	#topic {
-		padding: 1em;
-	}
-
 	#scrollback {
-		height: 80%;
+		position: absolute;
+		padding: 0.5em;
+		top: 3em;
+		bottom: 3em;
+		left:0;
+		right:0;
 		overflow: scroll;
 	}
 
@@ -124,12 +169,13 @@ function sendMessage(message) { 'use strict';
 	}
 
 	#bottom {
-		border-top: 1px dashed black;
-		height: 10%;
-	}
-
-	#channelName {
+		position: absolute;
+		bottom: 0;
+		height: 1em;
+		left: 0;
+		right: 0;
 		padding: 1em;
+		border-top: 1px dashed black;
 	}
 
 	#channelName {
@@ -137,14 +183,17 @@ function sendMessage(message) { 'use strict';
 	}
 
 	#input {
-		width: 80%;
+		position: absolute;
+		left: 15em;
+		right: 1em;
 	}
 </style>
 </head>
 <body>
 	<div id="left">
 		<div id="windows">
-
+		</div>
+		<div id="nicks">
 		</div>
 	</div>
 	<div id="right">
