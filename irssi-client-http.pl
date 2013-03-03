@@ -4,7 +4,11 @@ use strict;
 
 use Irssi;          # Interfacing with irssi
 use Irssi::TextUI;  # Accessing scrollbacks
-use IO::Socket;     # TCP connections
+
+use HTTP::Daemon;   # HTTP connections
+use HTTP::Status;   # HTTP Status codes
+use HTTP::Response; # HTTP Responses
+
 use JSON;           # Producing JSON output
 
 use vars qw($VERSION %IRSSI);
@@ -40,76 +44,63 @@ sub setup {
 #   Socket handling
 ##
 sub setup_tcp_socket() {
-    open_tcp_socket();
-    listen_socket();
-    Irssi::print("%B>>%n Client api set up in tcp mode", MSGLEVEL_CLIENTCRAP);
-}
-
-sub open_tcp_socket() {
     my $server_port = Irssi::settings_get_int('client_tcp_port');
-    $server = IO::Socket::INET->new(LocalPort => $server_port,
-                                    Type      => SOCK_STREAM,
-                                    Reuse     => 1,
-                                    Listen    => 2 )
+    $server = HTTP::Daemon->new(LocalPort => $server_port,
+                                Type      => SOCK_STREAM,
+                                Reuse     => 1,
+                                Listen    => 1 )
         or die "Couldn't be a tcp server on port $server_port : $@\n";
-}
 
-sub setup_ipc_socket() {
-    open_ipc_socket();
-    listen_socket();
-    Irssi::print("%B>>%n Client api set up in ipc mode", MSGLEVEL_CLIENTCRAP);
-}
-
-sub listen_socket() {
-    print "Server at " . fileno($server);
     # Add handler for server connections
     $server_tag = Irssi::input_add(fileno($server),
                                    Irssi::INPUT_READ,
-                                   \&handle_socket_connection, '');
+                                   \&handle_http_connection, '');
+
+    Irssi::print("%B>>%n Client api set up in tcp mode", MSGLEVEL_CLIENTCRAP);
 }
 
-sub handle_socket_connection() {
+sub handle_http_connection() {
     destroy_socket_client();
     $client = $server->accept();
-    
-    #print "Client connected at " . fileno($client);
-    
+
     # Add handler for client messages
     $client_tag = Irssi::input_add(fileno($client),
                                    Irssi::INPUT_READ,
-                                   \&handle_socket_message, '');
+                                   \&handle_http_request, '');
 }
 
-sub handle_socket_message() {
-    my $msg;
-    $client->recv($msg, 1024);
-    my ($cmd, $url, $data) = $msg =~ /^(GET|POST) ([^ ]+) HTTP\/[^\n]+\n(?:[^\n]+\n)*(.+)$/sm;
-    if ($cmd) {
-        print $client "HTTP/1.1 200 OK\n";
-        print $client "Content-Type: application/json\n";
-        print $client "Access-Control-Allow-Origin: *\n";
-        print $client "\n";
-        my @args = ($cmd, $url, $data, $client);
-        perform_command(\@args);
+sub handle_http_request() {
+    my $request = $client->get_request;
+    if ($request) {
+        my $response = HTTP::Response->new(RC_OK);
+        my $responseJson = perform_command($request);
+        $response->header('Content-Type' => 'application/json');
+        $response->header('Access-Control-Allow-Origin' => '*');
+        if ($responseJson) {
+            $response->content(to_json($responseJson, {utf8 => 1, pretty => 1}));
+        }
+        $client->send_response($response);
     } else {
-        print $client "HTTP/1.1 500 OK\n";
-        print $client "\n";
+        Irssi::print("%B>>%n: Closing connection: " . $client->reason, MSGLEVEL_CLIENTCRAP);
+        destroy_socket_client();
     }
-
-    destroy_socket_client();
 }
 
 sub destroy_socket_client() {
     Irssi::input_remove($client_tag);
+    undef($client_tag);
     if (defined $client) {
         close($client);
+        undef($client);
     }
 }
 
 sub destroy_socket_server() {
     Irssi::input_remove($server_tag);
+    undef($server_tag);
     if (defined $server) {
         close($server);
+        undef($server);
     }
 }
 
@@ -122,17 +113,20 @@ sub destroy_socket() {
 #   Command handling
 ##
 sub perform_command($) {
-    my $args = shift;
-    my ($cmd, $url, $data, $out) = @$args;
+    my $request = shift;
+    my $method = $request->method;
+    my $url = $request->uri->path;
+    my $data = $request->content;
 
     # Debug, write every processed command
     Irssi::print(
-        "%B>>%n $IRSSI{name} received command: $cmd $url $data",
+        "%B>>%n $IRSSI{name} received command: $method $url $data",
         MSGLEVEL_CLIENTCRAP);
     
+
     my $json;
 
-    if ($cmd eq "GET" && $url =~ /^\/windows\/?$/) {
+    if ($method eq "GET" && $url =~ /^\/windows\/?$/) {
         # List all windows
         $json = [];
         foreach (Irssi::windows()) {
@@ -148,7 +142,7 @@ sub perform_command($) {
             };
             push(@$json, $windowJson);
         }
-    } elsif ($cmd eq "GET" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
+    } elsif ($method eq "GET" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
         my $window = Irssi::window_find_refnum($1);
         if ($window) {
             my @items = $window->items();
@@ -198,8 +192,7 @@ sub perform_command($) {
 
             $json->{'lines'} = $linesJson;
         }
-
-    } elsif ($cmd eq "POST" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
+    } elsif ($method eq "POST" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
         # Skip empty lines
         return if $data =~ /^\s$/;
 
@@ -226,9 +219,7 @@ sub perform_command($) {
         };
     }
 
-    if ($json) {
-        print $out to_json($json, {utf8 => 1, pretty => 1});
-    }
+    return $json;
 }
 
 ##

@@ -35,7 +35,6 @@ Known issues
 ------------
 * Probably leaks connections or something
 * Doesn't have much error handling
-* Probably doesn't implement HTTP protocol properly
 
 Future improvements
 -------------------
