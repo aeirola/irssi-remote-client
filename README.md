@@ -40,5 +40,5 @@ Future improvements
 -------------------
 * Partial scrollback update (fetch lines between given timestamps, or something)
 * Use web sockets
-* Allow HTTPS
+* Use shared secret header
 * More commands

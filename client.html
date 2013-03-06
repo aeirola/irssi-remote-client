@@ -8,8 +8,10 @@
 <script type="text/javascript">
 $(document).ready(onReady);
 
+var baseUrl = '.';
+var password = 's3cr3t';
+
 var windowNumber = 1;
-var baseUrl = '.'
 
 function onReady() { 'use strict';
 	baseUrl = getParameterByName('url') || '.';
@@ -36,11 +38,16 @@ function getParameterByName(name) {
 	}
 }
 
+function addAuthHeader(xhr) {
+	xhr.setRequestHeader('Secret', password)
+}
+
 function getWindows() { 'use strict';
 	$.ajax({
 		type: 'GET',
 		url: baseUrl+'/windows',
 		dataType: 'json',
+		beforeSend: addAuthHeader,
 		success: function(windows) {
 			var list = $("#windows");
 			$.each(windows, function() {
@@ -67,7 +74,8 @@ function reloadWindow() { 'use strict';
 		type: 'GET',
 		url: baseUrl+'/windows/'+windowNumber,
 		dataType: 'json',
-		success: function(win) {
+		beforeSend: addAuthHeader,
+ 		success: function(win) {
 			$('#topic').html(win.topic);
 			$('#channelName').html(win.name);
 			var scrollback = $('#scrollback');

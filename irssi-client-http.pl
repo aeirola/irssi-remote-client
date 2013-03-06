@@ -31,7 +31,8 @@ our($server,            # Stores the server filehandle
 );
 
 sub add_settings {
-    Irssi::settings_add_int('client', 'client_tcp_port', 10000);
+    Irssi::settings_add_int('rest', 'rest_tcp_port', 10000);
+    Irssi::settings_add_str('rest', 'rest_password', 's3cr3t');
 }
 
 sub setup {
@@ -44,7 +45,7 @@ sub setup {
 #   Socket handling
 ##
 sub setup_tcp_socket() {
-    my $server_port = Irssi::settings_get_int('client_tcp_port');
+    my $server_port = Irssi::settings_get_int('rest_tcp_port');
     $server = HTTP::Daemon->new(LocalPort => $server_port,
                                 Type      => SOCK_STREAM,
                                 Reuse     => 1,
@@ -71,18 +72,38 @@ sub handle_http_connection() {
 
 sub handle_http_request() {
     my $request = $client->get_request;
-    if ($request) {
-        my $response = HTTP::Response->new(RC_OK);
-        my $responseJson = perform_command($request);
-        $response->header('Content-Type' => 'application/json');
-        $response->header('Access-Control-Allow-Origin' => '*');
-        if ($responseJson) {
-            $response->content(to_json($responseJson, {utf8 => 1, pretty => 1}));
-        }
-        $client->send_response($response);
-    } else {
+
+    if (!$request) {
         Irssi::print("%B>>%n: Closing connection: " . $client->reason, MSGLEVEL_CLIENTCRAP);
         destroy_socket_client();
+        return;
+    }
+
+    if (!isAuthenticated($request)) {
+        $client->send_error(RC_UNAUTHORIZED);
+        return;
+    }
+
+    my $response = HTTP::Response->new(RC_OK);
+    my $responseJson = perform_command($request);
+    $response->header('Content-Type' => 'application/json');
+    $response->header('Access-Control-Allow-Origin' => '*');
+    
+    if ($responseJson) {
+        $response->content(to_json($responseJson, {utf8 => 1, pretty => 1}));
+    }
+    
+    $client->send_response($response);
+}
+
+sub isAuthenticated($) {
+    my $request = shift;
+    my $password = Irssi::settings_get_str('rest_password');
+    if ($password) {
+        my $requestHeader = $request->header("Secret");
+        return $requestHeader eq $password;
+    } else {
+        return 1;
     }
 }
 
