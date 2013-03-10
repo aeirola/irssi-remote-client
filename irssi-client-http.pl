@@ -233,6 +233,7 @@ sub perform_command($) {
 sub getWindowLines() {
     my $window = shift;
     my $request = shift;
+
     my $view = $window->view;
     my $buffer = $view->{buffer};
     my $line = $buffer->{cur_line};
@@ -241,12 +242,19 @@ sub getWindowLines() {
     my $count = 500;
 
     # Limit by timestamp
-    my $timestampParam =  $request->uri->query_param("timestamp");
+    my $timestampLimit =  $request->uri->query_param("timestamp");
+    $timestampLimit = $timestampLimit ? $timestampLimit : 0;
+
+    # Return empty if no new lines
+    if ($line->{info}->{time} <= $timestampLimit) {
+        return [];
+    }
 
     # Scroll backwards until we find first line we want to add
-    while($count and ($line->{info}->{time} > $timestampParam)) {
-        if ($line->prev()) {
-            $line = $line->prev();
+    while($count) {
+        my $prev = $line->prev;
+        if ($prev and ($prev->{info}->{time} > $timestampLimit)) {
+            $line = $prev;
             $count--;
         } else {
             # Break from loop if list ends
@@ -257,7 +265,10 @@ sub getWindowLines() {
     my $linesArray = [];
     # Scroll forwards and add all lines till end
     while($line) {
-        push(@$linesArray, $line->get_text(0));
+        push(@$linesArray, {
+            "timestamp" => $line->{info}->{time},
+            "text" => $line->get_text(0),
+        });
         $line = $line->next();
     }
 

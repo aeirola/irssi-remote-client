@@ -13,6 +13,7 @@ var password = 's3cr3t';
 var pollInterval = 5000;
 
 var windowNumber = 1;
+var lastTimestamp = 0;
 
 function onReady() { 'use strict';
 	baseUrl = getParameterByName('url') || '.';
@@ -24,7 +25,7 @@ function onReady() { 'use strict';
 			input.val("");
 		}
 	});
-	setInterval(reloadWindow, pollInterval);
+	setInterval(pollLines, pollInterval);
 }
 
 function getParameterByName(name) {
@@ -81,20 +82,41 @@ function reloadWindow() { 'use strict';
 			$('#channelName').html(win.name);
 			var scrollback = $('#scrollback');
 			scrollback.empty();
-			$.each(win.lines, function() {
-				scrollback.append($('<span>').append(this));
-			});
-			scrollback.scrollTop(win.lines.length*20);
+			addLines(win.lines);
 
 			var nicks = $('#nicks');
 			nicks.empty();
-			$.each(win.nicks, function() {
-				nicks.append($('<div>').append(this));
-			});
-
+			if (win.nicks) {
+				$.each(win.nicks, function() {
+					nicks.append($('<div>').append(this));
+				});
+			}
 		}
 	});
 }
+
+function pollLines() { 'use strict';
+	$.ajax({
+		type: 'GET',
+		url: baseUrl+'/windows/'+windowNumber+'/lines?timestamp='+lastTimestamp,
+		dataType: 'json',
+		beforeSend: addAuthHeader,
+ 		success: addLines
+	});
+}
+
+function addLines(lines) {
+	var scrollback = $('#scrollback');
+	$.each(lines, function() {
+		addLine(this, scrollback);
+	});
+	scrollback.scrollTop(9999999999999);
+}
+
+function addLine(line, scrollback) {
+	scrollback.append($('<span>').append(line.text));
+	lastTimestamp = line.timestamp;
+};
 
 function sendMessage(message) { 'use strict';
 	$.ajax({
