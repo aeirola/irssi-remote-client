@@ -9,6 +9,9 @@ use HTTP::Daemon;   # HTTP connections
 use HTTP::Status;   # HTTP Status codes
 use HTTP::Response; # HTTP Responses
 
+use URI;
+use URI::QueryParam;
+
 use JSON;           # Producing JSON output
 
 use vars qw($VERSION %IRSSI);
@@ -137,6 +140,7 @@ sub perform_command($) {
     my $request = shift;
     my $method = $request->method;
     my $url = $request->uri->path;
+
     my $data = $request->content;
 
     # Debug, write every processed command
@@ -187,25 +191,28 @@ sub perform_command($) {
             }
 
             # Scrollback            
-            my $linesJson = [];
             my $view = $window->view;
-
-            # Alternative version for limiting
             my $buffer = $view->{buffer};
             my $line = $buffer->{cur_line};
-            my $count = 100;
+            # Max lines
+            my $count = 500;
 
-            # Scroll backwards till count
-            while($count) {
+            # Limit by timestamp
+            my $timestampParam =  $request->uri->query_param("timestamp");
+
+            # Scroll backwards until we find first line we want to add
+            while($count and ($line->{info}->{time} > $timestampParam)) {
                 if ($line->prev()) {
                     $line = $line->prev();
                     $count--;
                 } else {
+                    # Break from loop if list ends
                     $count = 0;
                 }
             }
 
-            # Scroll forwards till end
+            my $linesJson = [];
+            # Scroll forwards and add all lines till end
             while($line) {
                 push(@$linesJson, $line->get_text(0));
                 $line = $line->next();
