@@ -14,10 +14,12 @@ var pollInterval = 5000;
 
 var windowNumber = 1;
 var lastTimestamp = 0;
+var websocket;
 
 function onReady() { 'use strict';
 	baseUrl = getParameterByName('url') || '.';
 	getWindows();
+
 	var input = $('#input');
 	input.keypress(function(e) {
 		if (e.which == 13) {
@@ -25,7 +27,18 @@ function onReady() { 'use strict';
 			input.val("");
 		}
 	});
-	setInterval(pollLines, pollInterval);
+	
+	connectWebSocket();
+	if (!websocket) {
+		setInterval(pollLines, pollInterval);
+	}
+}
+
+function connectWebSocket() { 'user strict';
+	websocket = new WebSocket(baseUrl.replace("http", "ws")+'/websocket');
+	websocket.onmessage = function(event) {
+		addLines([{timestamp : 0, text: event.data}]);
+	};
 }
 
 function getParameterByName(name) {
@@ -119,12 +132,16 @@ function addLine(line, scrollback) {
 };
 
 function sendMessage(message) { 'use strict';
-	$.ajax({
-		type: 'POST',
-		url: baseUrl+'/windows/'+windowNumber,
-		data: message,
-		success: reloadWindow
-	});
+	if (websocket) {
+		websocket.send(message);
+	} else {
+		$.ajax({
+			type: 'POST',
+			url: baseUrl+'/windows/'+windowNumber,
+			data: message,
+			success: pollLines
+		});
+	}
 }
 
 </script>
