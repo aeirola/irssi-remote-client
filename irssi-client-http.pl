@@ -124,13 +124,11 @@ sub perform_command($) {
         my $window = Irssi::window_find_refnum($1);
         if ($window) {
             $json = getWindowLines($window, $request);
-        } else {
-            $json = [];
         }
     } elsif ($method eq "POST" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
         # Skip empty lines
         return if $data =~ /^\s$/;
-
+        
         # Say to channel on window
         my $window = Irssi::window_find_refnum($1);
         if ($window) {
@@ -244,11 +242,13 @@ sub handle_http_request($) {
     my $responseJson = perform_command($request);
     $response->header('Content-Type' => 'application/json');
     $response->header('Access-Control-Allow-Origin' => '*');
-    
+
     if ($responseJson) {
         $response->content(to_json($responseJson, {utf8 => 1, pretty => 1}));
+    } else {
+        $response->content("\n");
     }
-    
+
     $client->send_response($response);
 }
 
@@ -279,12 +279,11 @@ sub handle_websocket_message($) {
             if ($frame->is_close) {
                 my $hs = $connection->{handshake};
                 # Send close frame back
-
                 print $client $hs->build_frame(type => 'close', version => 'draft-ietf-hybi-17')->to_bytes;
                 return;
+            } else {
+                print $client $frame->new($message)->to_bytes();
             }
-
-            print $client $frame->new($message)->to_bytes();
         }
     } else {
         destroy_connection($connection);
