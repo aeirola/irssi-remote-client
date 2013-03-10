@@ -19,6 +19,10 @@ Returns an list of window objects including the number, name and channel
 GET /windows/[number]
 Returns window information with nicks and lines and stuff
 
+GET /windows/[number]/lines?timestamp=[limit]
+Returns window lines, optionally limited by timestamp param. Useful for updating a view
+
+
 POST /windows/[number]
 Writes a line to the given window number
 

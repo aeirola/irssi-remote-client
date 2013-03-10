@@ -190,35 +190,14 @@ sub perform_command($) {
                 $json->{'nicks'} = $nicksJson;
             }
 
-            # Scrollback            
-            my $view = $window->view;
-            my $buffer = $view->{buffer};
-            my $line = $buffer->{cur_line};
-            # Max lines
-            my $count = 500;
-
-            # Limit by timestamp
-            my $timestampParam =  $request->uri->query_param("timestamp");
-
-            # Scroll backwards until we find first line we want to add
-            while($count and ($line->{info}->{time} > $timestampParam)) {
-                if ($line->prev()) {
-                    $line = $line->prev();
-                    $count--;
-                } else {
-                    # Break from loop if list ends
-                    $count = 0;
-                }
-            }
-
-            my $linesJson = [];
-            # Scroll forwards and add all lines till end
-            while($line) {
-                push(@$linesJson, $line->get_text(0));
-                $line = $line->next();
-            }
-
-            $json->{'lines'} = $linesJson;
+            $json->{'lines'} = getWindowLines($window, $request);
+        }
+    } elsif ($method eq "GET" && $url =~ /^\/windows\/([0-9]+)\/lines\/?$/) {
+        my $window = Irssi::window_find_refnum($1);
+        if ($window) {
+            $json = getWindowLines($window, $request);
+        } else {
+            $json = [];
         }
     } elsif ($method eq "POST" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
         # Skip empty lines
@@ -239,7 +218,8 @@ sub perform_command($) {
         $json = {
             "GET" => {
                 "windows" => "List all windows",
-                "windows/[window_id]" => "List window content"
+                "windows/[window_id]" => "List window content",
+                "windows/[window_id]/lines?timestamp=[limit]" => "List window lines",
             },
             "POST" => {
                 "windows/[id]" => "Post message to window"
@@ -248,6 +228,40 @@ sub perform_command($) {
     }
 
     return $json;
+}
+
+sub getWindowLines() {
+    my $window = shift;
+    my $request = shift;
+    my $view = $window->view;
+    my $buffer = $view->{buffer};
+    my $line = $buffer->{cur_line};
+
+    # Max lines
+    my $count = 500;
+
+    # Limit by timestamp
+    my $timestampParam =  $request->uri->query_param("timestamp");
+
+    # Scroll backwards until we find first line we want to add
+    while($count and ($line->{info}->{time} > $timestampParam)) {
+        if ($line->prev()) {
+            $line = $line->prev();
+            $count--;
+        } else {
+            # Break from loop if list ends
+            $count = 0;
+        }
+    }
+
+    my $linesArray = [];
+    # Scroll forwards and add all lines till end
+    while($line) {
+        push(@$linesArray, $line->get_text(0));
+        $line = $line->next();
+    }
+
+    return $linesArray;
 }
 
 ##
