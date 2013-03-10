@@ -30,12 +30,7 @@ $VERSION = '0.01';
 );
 
 our ($server,           # Stores the server information
-     $connections,      # Stores client connections information
-#    $server_tag,        # Stores the irssi tag of the server input listener
-#    $client,            # Stores the client filehandle (should maybe be an array)
-#    $client_tag,        # Stores the irssi tag of the client input listener
-#    $hs,
-#    $frame,
+     %connections,      # Stores client connections information
 );
 
 sub add_settings {
@@ -44,157 +39,30 @@ sub add_settings {
 }
 
 sub setup {
-    log_to_console("%B>>%n Setting up client api");
+    log_to_console("Setting up client api");
     add_settings();
     setup_tcp_socket();
+
+    Irssi::signal_add_last("print text", "print_text_event");
+    #Irssi::signal_add_last("gui print text", "gui_print_text_event");
 }
 
 ##
-#   Socket handling
+#   Signal handling
 ##
-sub setup_tcp_socket() {
-    my $server_port = Irssi::settings_get_int('rest_tcp_port');
-    my $handle = HTTP::Daemon->new(LocalPort => $server_port,
-                                            Type      => SOCK_STREAM,
-                                            Reuse     => 1,
-                                            Listen    => 1 )
-        or die "Couldn't be a tcp server on port $server_port : $@\n";
-    $server->{handle} = $handle;
-
-    # Add handler for server connections
-    my $tag = Irssi::input_add(fileno($handle),
-                                   Irssi::INPUT_READ,
-                                   \&handle_connection, $server);
-
-    $server->{tag} = $tag;
-    $connections = [];
-    log_to_console("%B>>%n Client api set up in tcp mode");
+sub print_text_event {
+    #  "print text", TEXT_DEST_REC *dest, char *text, char *stripped
+    my ($dest, $text, $stripped) = @_;
+    my $name = $dest->{window}->{refnum};
+    send_to_clients("$name: $stripped");
+}
+sub gui_print_text_event {
+    #   "gui print text", WINDOW_REC, int fg, int bg, int flags, char *text, TEXT_DEST_REC
+    my ($win, $fg, $bg, $flags, $text, $dest) = @_;
+    my $name = $win->{refnum};
+    send_to_clients("$name: $text $flags");
 }
 
-sub handle_connection() {
-    my $server = shift;
-    my $handle = $server->{handle}->accept();
-
-    log_to_console("client_handle connected at $handle");
-
-    my $connection = {
-        "handle" => $handle,
-        "tag" => 0,
-    };
-
-    # Add handler for connection messages
-    my $tag = Irssi::input_add(fileno($handle),
-                                   Irssi::INPUT_READ,
-                                   \&handle_message, $connection);
-    $connection->{tag} = $tag;
-    push(@$connections, $connection);
-}
-
-sub handle_message($) {
-    my $connection = shift;
-    if ($connection->{frame}) {
-        handle_websocket_message($connection);
-    } else {
-        handle_http_request($connection);
-    }
-}
-
-sub handle_websocket_message($) {
-    my $connection = shift;
-    my $client = $connection->{handle};
-    my $frame = $connection->{frame};
-
-    my $rs = $client->sysread(my $chunk, 1024);
-    if ($rs) {
-        $frame->append($chunk);
-        while (my $message = $frame->next) {
-            log_to_console($message);
-            print $client $frame->new($message)->to_bytes();
-        }
-    } else {
-        log_to_console("fail");
-        destroy_connection($connection);
-    }
-}
-
-sub handle_http_request($) {
-    my $connection = shift;
-    my $client = $connection->{handle};
-    my $request = $client->get_request;
-
-    if (!$request) {
-        Irssi::print("%B>>%n: Closing connection: " . $client->reason, MSGLEVEL_CLIENTCRAP);
-        destroy_connection($connection);
-        return;
-    }
-
-    if (!isAuthenticated($request)) {
-        $client->send_error(RC_UNAUTHORIZED);
-        return;
-    }
-
-    # Handle websocket initiations
-    if ($request->method eq "GET" && $request->url =~ /^\/websocket\/?$/) {
-        print "starting websocket";
-        my $hs = Protocol::WebSocket::Handshake::Server->new;
-        my $frame = $hs->build_frame;
-        
-        $connection->{handshake} = $hs;
-        $connection->{frame} = $frame;
-
-        $hs->parse($request->as_string);
-        print $client $hs->to_string;
-        $connection->{websocket} = 1;
-        print "WebSocket started";
-
-        return;
-    }
-
-    my $response = HTTP::Response->new(RC_OK);
-    my $responseJson = perform_command($request);
-    $response->header('Content-Type' => 'application/json');
-    $response->header('Access-Control-Allow-Origin' => '*');
-    
-    if ($responseJson) {
-        $response->content(to_json($responseJson, {utf8 => 1, pretty => 1}));
-    }
-    
-    $client->send_response($response);
-}
-
-sub isAuthenticated($) {
-    my $request = shift;
-    my $password = Irssi::settings_get_str('rest_password');
-    if ($password) {
-        my $requestHeader = $request->header("Secret");
-        return $requestHeader eq $password;
-    } else {
-        return 1;
-    }
-}
-
-sub destroy_clients() {
-
-}
-
-sub destroy_connection($) {
-    my $socket = shift;
-    Irssi::input_remove($socket->{tag});
-    undef($socket->{tag});
-    if (defined $socket->{handle}) {
-        close($socket->{handle});
-        undef($socket->{handle});
-    }
-}
-
-sub destroy_server() {
-    destroy_connection($server);
-}
-
-sub destroy_socket() {
-    destroy_clients();
-    destroy_server();
-}
 
 ##
 #   Command handling
@@ -207,10 +75,7 @@ sub perform_command($) {
     my $data = $request->content;
 
     # Debug, write every processed command
-    Irssi::print(
-        "%B>>%n $IRSSI{name} received command: $method $url $data",
-        MSGLEVEL_CLIENTCRAP);
-    
+    log_to_console("received command: $method $url $data");
 
     my $json;
 
@@ -338,16 +203,211 @@ sub getWindowLines() {
     return $linesArray;
 }
 
+
+##
+#   HTTP stuff
+##
+sub handle_http_request($) {
+    my $connection = shift;
+    my $client = $connection->{handle};
+    my $request = $client->get_request;
+
+    if (!$request) {
+        log_to_console("Closing connection: " . $client->reason, MSGLEVEL_CLIENTCRAP);
+        destroy_connection($connection);
+        return;
+    }
+
+    if (!isAuthenticated($request)) {
+        $client->send_error(RC_UNAUTHORIZED);
+        return;
+    }
+
+    # Handle websocket initiations
+    if ($request->method eq "GET" && $request->url =~ /^\/websocket\/?$/) {
+        log_to_console("Starting websocket");
+        my $hs = Protocol::WebSocket::Handshake::Server->new;
+        my $frame = $hs->build_frame;
+        
+        $connection->{handshake} = $hs;
+        $connection->{frame} = $frame;
+
+        $hs->parse($request->as_string);
+        print $client $hs->to_string;
+        $connection->{websocket} = 1;
+        log_to_console("WebSocket started");
+
+        return;
+    }
+
+    my $response = HTTP::Response->new(RC_OK);
+    my $responseJson = perform_command($request);
+    $response->header('Content-Type' => 'application/json');
+    $response->header('Access-Control-Allow-Origin' => '*');
+    
+    if ($responseJson) {
+        $response->content(to_json($responseJson, {utf8 => 1, pretty => 1}));
+    }
+    
+    $client->send_response($response);
+}
+
+sub isAuthenticated($) {
+    my $request = shift;
+    my $password = Irssi::settings_get_str('rest_password');
+    if ($password) {
+        my $requestHeader = $request->header("Secret");
+        return $requestHeader eq $password;
+    } else {
+        return 1;
+    }
+}
+
+
+###
+#   WebSocket stuff
+###
+sub handle_websocket_message($) {
+    my $connection = shift;
+    my $client = $connection->{handle};
+    my $frame = $connection->{frame};
+
+    my $rs = $client->sysread(my $chunk, 1024);
+    if ($rs) {
+        $frame->append($chunk);
+        while (my $message = $frame->next) {
+            if ($frame->is_close) {
+                my $hs = $connection->{handshake};
+                # Send close frame back
+
+                print $client $hs->build_frame(type => 'close', version => 'draft-ietf-hybi-17')->to_bytes;
+                return;
+            }
+
+            print $client $frame->new($message)->to_bytes();
+        }
+    } else {
+        destroy_connection($connection);
+    }
+}
+
+sub send_to_client {
+    my $message = shift;
+    my $connection = shift;
+    my $client = $connection->{handle};
+    my $frame = $connection->{frame};
+
+    print $client $frame->new($message)->to_bytes();
+}
+
+sub send_to_clients {
+    my $message = shift;
+    foreach (keys %connections) {
+        my $connection = $connections{$_};
+        if ($connection->{frame}) {
+            send_to_client($message, $connection);
+        }
+    }
+}
+
+
+##
+#   Socket handling
+##
+sub setup_tcp_socket() {
+    my $server_port = Irssi::settings_get_int('rest_tcp_port');
+    my $handle = HTTP::Daemon->new(LocalPort => $server_port,
+                                            Type      => SOCK_STREAM,
+                                            Reuse     => 1,
+                                            Listen    => 1 )
+        or die "Couldn't be a tcp server on port $server_port : $@\n";
+    $server->{handle} = $handle;
+    log_to_console("Server started on " . fileno($handle), 1);
+
+    # Add handler for server connections
+    my $tag = Irssi::input_add(fileno($handle),
+                                   Irssi::INPUT_READ,
+                                   \&handle_connection, $server);
+
+    $server->{tag} = $tag;
+    %connections = ();
+    log_to_console("Client api set up in HTTP mode");
+}
+
+sub handle_connection() {
+    my $server = shift;
+    my $handle = $server->{handle}->accept();
+
+    log_to_console("Client connected on " . fileno($handle));
+
+    my $connection = {
+        "handle" => $handle,
+        "tag" => 0,
+    };
+
+    # Add handler for connection messages
+    my $tag = Irssi::input_add(fileno($handle),
+                                   Irssi::INPUT_READ,
+                                   \&handle_message, $connection);
+    $connection->{tag} = $tag;
+    $connections{$tag} = $connection;
+}
+
+sub handle_message($) {
+    my $connection = shift;
+    if ($connection->{frame}) {
+        handle_websocket_message($connection);
+    } else {
+        handle_http_request($connection);
+    }
+}
+
+sub destroy_connections {
+    foreach (keys %connections) {
+        destroy_connection($connections{$_});
+    }
+}
+
+sub destroy_connection {
+    my $connection = shift;
+    my $tag = $connection->{tag};
+    log_to_console("Destroying client connection $tag");
+    destroy_socket($connection);
+    delete($connections{$tag});
+}
+
+sub destroy_socket {
+    my $socket = shift;
+    Irssi::input_remove($socket->{tag});
+    undef($socket->{tag});
+    if (defined $socket->{handle}) {
+        close($socket->{handle});
+        undef($socket->{handle});
+    }
+}
+
+sub destroy_server {
+    log_to_console("Destroying server");
+    destroy_socket($server);
+}
+
+sub destroy_sockets {
+    destroy_connections();
+    destroy_server();
+}
+
+
 ##
 #   Misc stuff
 ##
 sub teardown() {
-    destroy_socket();
+    destroy_sockets();
 }
 
-sub log_to_console() {
+sub log_to_console {
     my $message = shift;
-    Irssi::print($message, MSGLEVEL_CLIENTCRAP);
+    my $level = shift;
+    Irssi::print("%B>>%n $IRSSI{name} $message", MSGLEVEL_CLIENTCRAP);
 }
 
 # Setup on load
@@ -361,6 +421,6 @@ Irssi::signal_add_first
             /(?:^|\s) $IRSSI{name}
              (?:\.[^. ]*)? (?:\s|$) /x;
         teardown();
-        Irssi::print("%B>>%n $IRSSI{name} $VERSION unloaded", MSGLEVEL_CLIENTCRAP);
+        log_to_console("$VERSION unloaded");
     };    
-Irssi::print("%B>>%n $IRSSI{name} $VERSION (by $IRSSI{authors}) loaded", MSGLEVEL_CLIENTCRAP);
+log_to_console("$VERSION (by $IRSSI{authors}) loaded");

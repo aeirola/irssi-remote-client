@@ -12,6 +12,8 @@ var baseUrl = '.';
 var password = 's3cr3t';
 var pollInterval = 5000;
 
+var LARGE_INT = 900719925;
+
 var windowNumber = 1;
 var lastTimestamp = 0;
 var websocket;
@@ -123,7 +125,7 @@ function addLines(lines) {
 	$.each(lines, function() {
 		addLine(this, scrollback);
 	});
-	scrollback.scrollTop(9999999999999);
+	scrollback.scrollTop(LARGE_INT);
 }
 
 function addLine(line, scrollback) {
@@ -132,7 +134,7 @@ function addLine(line, scrollback) {
 };
 
 function sendMessage(message) { 'use strict';
-	if (websocket) {
+	if (websocket && false) {
 		websocket.send(message);
 	} else {
 		$.ajax({
