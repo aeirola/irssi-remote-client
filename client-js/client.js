@@ -30,10 +30,19 @@ function setFocus() { 'use strict';
 }
 
 function connectWebSocket() { 'user strict';
-	websocket = new WebSocket(baseUrl.replace("http", "ws")+'/websocket');
+	var weUrl = baseUrl.replace("http", "ws")+'/websocket';
+	var protocol = 'ira';
+	websocket = new WebSocket(weUrl, protocol);
+	// Authenticate
+	websocket.onopen = function() {
+		websocket.send(JSON.stringify({
+			method: 'authenticate',
+			secret: getPasswordHash()
+		}));
+	};
+	// Handle messages
 	websocket.onmessage = function(event) {
 		var message = JSON.parse(event.data);
-		console.log(message);
 		if (message.window === windowNumber) {
 			addLines([{timestamp : 0, text: message.text}]);
 		} else {
@@ -55,7 +64,7 @@ function getParameterByName(name) {
 }
 
 function addAuthHeader(xhr) {
-	xhr.setRequestHeader('Secret', password)
+	xhr.setRequestHeader('Secret', getPasswordHash());
 }
 
 function getWindows() { 'use strict';
@@ -139,8 +148,13 @@ function sendMessage(message) { 'use strict';
 	} else {
 		$.ajax({
 			type: 'POST',
+			beforeSend: addAuthHeader,
 			url: baseUrl+'/windows/'+windowNumber,
 			data: message
 		});
 	}
+}
+
+function getPasswordHash() {
+	return password;
 }

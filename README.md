@@ -51,3 +51,4 @@ Future improvements
 * JSON-RPC support on WebSocket?
 * Cleaner API
 * More commands
+* Reconnection, pings, fault tolerance

@@ -166,7 +166,7 @@ sub getWindowLines() {
     my $line = $buffer->{cur_line};
 
     # Max lines
-    my $count = 500;
+    my $count = 100;
 
     # Limit by timestamp
     my $timestampLimit =  $request->uri->query_param("timestamp");
@@ -217,11 +217,6 @@ sub handle_http_request($) {
         return;
     }
 
-    if (!isAuthenticated($request)) {
-        $client->send_error(RC_UNAUTHORIZED);
-        return;
-    }
-
     # Handle websocket initiations
     if ($request->method eq "GET" && $request->url =~ /^\/websocket\/?$/) {
         log_to_console("Starting websocket");
@@ -233,9 +228,17 @@ sub handle_http_request($) {
 
         $hs->parse($request->as_string);
         print $client $hs->to_string;
-        $connection->{websocket} = 1;
+        $connection->{isWebsocket} = 1;
+        if (!Irssi::settings_get_str('rest_password')) {
+            $connection->{isAuthenticated} = 1;
+        }
         log_to_console("WebSocket started");
 
+        return;
+    }
+
+    if (!isAuthenticated($request)) {
+        $client->send_error(RC_UNAUTHORIZED);
         return;
     }
 
@@ -283,7 +286,12 @@ sub handle_websocket_message($) {
                 print $client $hs->build_frame(type => 'close', version => 'draft-ietf-hybi-17')->to_bytes;
                 return;
             } else {
-                print $client $frame->new($message)->to_bytes();
+                # Authentiacte
+                my $json = from_json($message, {utf8 => 1});
+                if ($json->{method} eq "authenticate" and 
+                        $json->{secret} eq Irssi::settings_get_str('rest_password')) {
+                    $connection->{isAuthenticated} = 1;
+                }
             }
         }
     } else {
@@ -305,7 +313,7 @@ sub send_to_clients {
     my $message = to_json($json, {utf8 => 1, pretty => 1});
     foreach (keys %connections) {
         my $connection = $connections{$_};
-        if ($connection->{frame}) {
+        if ($connection->{isWebsocket} and $connection->{isAuthenticated}) {
             send_to_client($message, $connection);
         }
     }
