@@ -22,10 +22,10 @@ $VERSION = '0.01';
 %IRSSI = (
     authors     => 'Axel Eirola',
     contact     => 'axel.eirola@iki.fi',
-    name        => 'irssi client api',
+    name        => 'irssi rest api',
     description => 'This script allows ' .
                    'remote clients to  ' .
-                   'control irssi.',
+                   'control irssi via REST API',
     license     => 'Public Domain',
 );
 
@@ -35,16 +35,15 @@ our ($server,           # Stores the server information
 
 sub add_settings {
     Irssi::settings_add_int('rest', 'rest_tcp_port', 10000);
-    Irssi::settings_add_str('rest', 'rest_password', 's3cr3t');
+    Irssi::settings_add_str('rest', 'rest_password', 'd0ntLe@veM3');
 }
 
 sub setup {
-    log_to_console("Setting up client api");
+    log_to_console("Setting up rest api");
     add_settings();
     setup_tcp_socket();
 
     Irssi::signal_add_last("print text", "print_text_event");
-    #Irssi::signal_add_last("gui print text", "gui_print_text_event");
 }
 
 ##
@@ -53,14 +52,16 @@ sub setup {
 sub print_text_event {
     #  "print text", TEXT_DEST_REC *dest, char *text, char *stripped
     my ($dest, $text, $stripped) = @_;
-    my $name = $dest->{window}->{refnum};
-    send_to_clients("$name: $stripped");
-}
-sub gui_print_text_event {
-    #   "gui print text", WINDOW_REC, int fg, int bg, int flags, char *text, TEXT_DEST_REC
-    my ($win, $fg, $bg, $flags, $text, $dest) = @_;
-    my $name = $win->{refnum};
-    send_to_clients("$name: $text $flags");
+
+    # XXX: Should follow theme format
+    my ($sec,$min,$hour) = localtime(time);
+    my $text = "$hour:$min $stripped";
+
+    my $json = {
+        "window" => $dest->{window}->{refnum},
+        "text" => $text
+    };
+    send_to_clients($json);
 }
 
 
@@ -300,7 +301,8 @@ sub send_to_client {
 }
 
 sub send_to_clients {
-    my $message = shift;
+    my $json = shift;
+    my $message = to_json($json, {utf8 => 1, pretty => 1});
     foreach (keys %connections) {
         my $connection = $connections{$_};
         if ($connection->{frame}) {
@@ -330,7 +332,7 @@ sub setup_tcp_socket() {
 
     $server->{tag} = $tag;
     %connections = ();
-    log_to_console("Client api set up in HTTP mode");
+    log_to_console("Rest api set up in HTTP mode");
 }
 
 sub handle_connection() {

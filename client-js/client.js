@@ -1,18 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<meta charset='utf-8'>
-	<title>Irssi JS client (BETA)</title>
-	<script src='http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js'></script>
-
-<script type="text/javascript">
 $(document).ready(onReady);
 
 var baseUrl = '.';
-var password = 's3cr3t';
-var pollInterval = 5000;
+var password = 'd0ntLe@veM3';
 
-var LARGE_INT = 900719925;
+var LARGE_INT = 900719925;	// For scrolling the main window, $.scrollTop() works wierdly
 
 var windowNumber = 1;
 var lastTimestamp = 0;
@@ -31,15 +22,23 @@ function onReady() { 'use strict';
 	});
 	
 	connectWebSocket();
-	if (!websocket) {
-		setInterval(pollLines, pollInterval);
-	}
+	setFocus();
+}
+
+function setFocus() { 'use strict';
+	$('#input').focus();
 }
 
 function connectWebSocket() { 'user strict';
 	websocket = new WebSocket(baseUrl.replace("http", "ws")+'/websocket');
 	websocket.onmessage = function(event) {
-		addLines([{timestamp : 0, text: event.data}]);
+		var message = JSON.parse(event.data);
+		console.log(message);
+		if (message.window === windowNumber) {
+			addLines([{timestamp : 0, text: message.text}]);
+		} else {
+			// Todo activity indication
+		}
 	};
 }
 
@@ -64,6 +63,7 @@ function getWindows() { 'use strict';
 		type: 'GET',
 		url: baseUrl+'/windows',
 		dataType: 'json',
+		cache: false,
 		beforeSend: addAuthHeader,
 		success: function(windows) {
 			var list = $("#windows");
@@ -84,6 +84,7 @@ function getWindows() { 'use strict';
 function switchWindow(newWindowNumber) { 'use strict';
 	windowNumber = newWindowNumber;
 	reloadWindow();
+	setFocus();
 }
 
 function reloadWindow() { 'use strict';
@@ -91,6 +92,7 @@ function reloadWindow() { 'use strict';
 		type: 'GET',
 		url: baseUrl+'/windows/'+windowNumber,
 		dataType: 'json',
+		cache: false,
 		beforeSend: addAuthHeader,
  		success: function(win) {
 			$('#topic').html(win.topic);
@@ -103,20 +105,18 @@ function reloadWindow() { 'use strict';
 			nicks.empty();
 			if (win.nicks) {
 				$.each(win.nicks, function() {
-					nicks.append($('<div>').append(this));
+					var text = this;
+					var nick = $('<div>').append(text);
+					// Add nick-completion
+					nick.click(function(){
+						var input = $('#input');
+						input.val(input.val() + text + ": ");
+						setFocus();
+					});
+					nicks.append(nick);
 				});
 			}
 		}
-	});
-}
-
-function pollLines() { 'use strict';
-	$.ajax({
-		type: 'GET',
-		url: baseUrl+'/windows/'+windowNumber+'/lines?timestamp='+lastTimestamp,
-		dataType: 'json',
-		beforeSend: addAuthHeader,
- 		success: addLines
 	});
 }
 
@@ -140,128 +140,7 @@ function sendMessage(message) { 'use strict';
 		$.ajax({
 			type: 'POST',
 			url: baseUrl+'/windows/'+windowNumber,
-			data: message,
-			success: pollLines
+			data: message
 		});
 	}
 }
-
-</script>
-
-<style type="text/css">
-	html, body {
-		font-family: monospace;
-		height: 100%;
-		width: 100%;
-		padding: 0;
-		margin: 0;
-	}
-
-	#left {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		width: 10em;
-		border-right: 1px dashed black;
-	}
-
-	#windows  {
-		padding: 0.5em;
-	}
-
-	#windows div {
-		padding: 0.5em;
-		border-bottom: 1px dashed gray;
-	}
-
-	#nicks {
-		position: absolute;
-		bottom: 0;
-		width: 10em;
-		padding: 0.5em;
-	}
-
-	#nicks div {
-		padding: 0.1em;
-	}
-
-	#right {
-		position: absolute;
-		left: 10em;
-		right: 0;
-		top: 0;
-		bottom: 0;
-	}
-
-	#top {
-		position: absolute;
-		height: 1em;
-		left: 0;
-		right: 0;
-		padding: 1em;
-		border-bottom: 1px dashed black;
-	}
-
-	#github {
-		position: absolute;
-		right: 1em;
-	}
-
-	#scrollback {
-		position: absolute;
-		padding: 0.5em;
-		top: 3em;
-		bottom: 3em;
-		left:0;
-		right:0;
-		overflow: scroll;
-	}
-
-	#scrollback span {
-		padding: 0.1em;
-		float: left;
-		clear: both;
-	}
-
-	#bottom {
-		position: absolute;
-		bottom: 0;
-		height: 1em;
-		left: 0;
-		right: 0;
-		padding: 1em;
-		border-top: 1px dashed black;
-	}
-
-	#channelName {
-		width: 20%;
-	}
-
-	#input {
-		position: absolute;
-		left: 15em;
-		right: 1em;
-	}
-</style>
-</head>
-<body>
-	<div id="left">
-		<div id="windows">
-		</div>
-		<div id="nicks">
-		</div>
-	</div>
-	<div id="right">
-		<div id="top">
-			<span id="topic"></span>
-			<span id="github"><a href="https://github.com/aeirola/irssi-client">GitHub</a></span>
-		</div>
-		<div id="scrollback">
-		</div>
-		<div id="bottom">
-			<span id="channelName"></span>
-			<input id="input" type="text" autofocus />
-		</div>
-	</div>
-</body>
-</html>
