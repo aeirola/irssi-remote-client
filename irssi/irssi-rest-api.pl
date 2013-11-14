@@ -3,7 +3,6 @@
 use strict;
 
 use Irssi;          # Interfacing with irssi
-use Irssi::TextUI;  # Accessing scrollbacks
 
 use HTTP::Daemon;   # HTTP connections
 use HTTP::Status;   # HTTP Status codes
@@ -55,11 +54,11 @@ sub print_text_event {
 
     # XXX: Should follow theme format
     my ($sec,$min,$hour) = localtime(time);
-    my $text = "$hour:$min $stripped";
+    my $formatted_text = "$hour:$min $stripped";
 
     my $json = {
         "window" => $dest->{window}->{refnum},
-        "text" => $text
+        "text" => $formatted_text
     };
     send_to_clients($json);
 }
@@ -423,7 +422,7 @@ sub log_to_console {
 setup();
 
 # Teardown on unload
-Irssi::signal_add_first
+Irssi::signal_add_first(
     'command script unload', sub {
         my ($script) = @_;
         return unless $script =~
@@ -431,5 +430,7 @@ Irssi::signal_add_first
              (?:\.[^. ]*)? (?:\s|$) /x;
         teardown();
         log_to_console("$VERSION unloaded");
-    };    
+    });
 log_to_console("$VERSION (by $IRSSI{authors}) loaded");
+
+1;
