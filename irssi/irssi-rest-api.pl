@@ -43,6 +43,7 @@ sub setup {
     setup_tcp_socket();
 
     Irssi::signal_add_last("print text", "print_text_event");
+    log_to_console("$VERSION (by $IRSSI{authors}) loaded");
 }
 
 ##
@@ -408,8 +409,9 @@ sub destroy_sockets {
 ##
 #   Misc stuff
 ##
-sub teardown() {
+sub UNLOAD() {
     destroy_sockets();
+    log_to_console("$VERSION unloaded");
 }
 
 sub log_to_console {
@@ -420,17 +422,5 @@ sub log_to_console {
 
 # Setup on load
 setup();
-
-# Teardown on unload
-Irssi::signal_add_first(
-    'command script unload', sub {
-        my ($script) = @_;
-        return unless $script =~
-            /(?:^|\s) $IRSSI{name}
-             (?:\.[^. ]*)? (?:\s|$) /x;
-        teardown();
-        log_to_console("$VERSION unloaded");
-    });
-log_to_console("$VERSION (by $IRSSI{authors}) loaded");
 
 1;

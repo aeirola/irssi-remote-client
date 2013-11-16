@@ -99,8 +99,13 @@ Future improvements
 * More commands
 * Reconnection, pings, fault tolerance
 
+Irssi documentation
+-------------------
+* http://irssi.org/documentation: Official
+* https://github.com/shabble/irssi-docs: Unofficial
+
 Similar failed projects
 -----------------------
 * http://wouter.coekaerts.be/webssi/ : But they used some horrible GWT on the client side
 * http://max.kellermann.name/projects/web-irssi/ : But they used a separate CGI script and irssi Perl script
-
+* https://github.com/cho45/Irssw
