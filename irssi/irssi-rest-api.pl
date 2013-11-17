@@ -12,7 +12,6 @@ use URI;
 use URI::QueryParam;
 
 use Protocol::WebSocket;
-
 use JSON;           # Producing JSON output
 
 use vars qw($VERSION %IRSSI);
@@ -38,12 +37,10 @@ sub add_settings {
 }
 
 sub setup {
-    log_to_console("Setting up rest api");
     add_settings();
     setup_tcp_socket();
 
     Irssi::signal_add_last("print text", "print_text_event");
-    log_to_console("$VERSION (by $IRSSI{authors}) loaded");
 }
 
 ##
@@ -68,8 +65,8 @@ sub print_text_event {
 ##
 #   Command handling
 ##
-sub perform_command($) {
-    my $request = shift;
+sub perform_command {
+    my ($request) = @_;
     my $method = $request->method;
     my $url = $request->uri->path;
 
@@ -157,9 +154,8 @@ sub perform_command($) {
     return $json;
 }
 
-sub getWindowLines() {
-    my $window = shift;
-    my $request = shift;
+sub getWindowLines {
+    my ($window, $request) = @_;
 
     my $view = $window->view;
     my $buffer = $view->{buffer};
@@ -206,12 +202,12 @@ sub getWindowLines() {
 ##
 #   HTTP stuff
 ##
-sub handle_http_request($) {
-    my $connection = shift;
+sub handle_http_request {
+    my ($connection) = @_;
     my $client = $connection->{handle};
-    my $request = $client->get_request;
+    my $request = $client->get_request();
 
-    if (!$request) {
+    unless ($request) {
         log_to_console("Closing connection: " . $client->reason, MSGLEVEL_CLIENTCRAP);
         destroy_connection($connection);
         return;
@@ -237,7 +233,7 @@ sub handle_http_request($) {
         return;
     }
 
-    if (!isAuthenticated($request)) {
+    unless (isAuthenticated($request)) {
         $client->send_error(RC_UNAUTHORIZED);
         return;
     }
@@ -256,12 +252,12 @@ sub handle_http_request($) {
     $client->send_response($response);
 }
 
-sub isAuthenticated($) {
-    my $request = shift;
+sub isAuthenticated {
+    my ($request) = @_;
     my $password = Irssi::settings_get_str('rest_password');
     if ($password) {
         my $requestHeader = $request->header("Secret");
-        return $requestHeader eq $password;
+        return defined($requestHeader) && $requestHeader eq $password;
     } else {
         return 1;
     }
@@ -271,8 +267,8 @@ sub isAuthenticated($) {
 ###
 #   WebSocket stuff
 ###
-sub handle_websocket_message($) {
-    my $connection = shift;
+sub handle_websocket_message {
+    my ($connection) = @_;
     my $client = $connection->{handle};
     my $frame = $connection->{frame};
 
@@ -300,8 +296,7 @@ sub handle_websocket_message($) {
 }
 
 sub send_to_client {
-    my $message = shift;
-    my $connection = shift;
+    my ($message, $connection) = @_;
     my $client = $connection->{handle};
     my $frame = $connection->{frame};
 
@@ -309,7 +304,7 @@ sub send_to_client {
 }
 
 sub send_to_clients {
-    my $json = shift;
+    my ($json) = @_;
     my $message = to_json($json, {utf8 => 1, pretty => 1});
     foreach (keys %connections) {
         my $connection = $connections{$_};
@@ -323,7 +318,7 @@ sub send_to_clients {
 ##
 #   Socket handling
 ##
-sub setup_tcp_socket() {
+sub setup_tcp_socket {
     my $server_port = Irssi::settings_get_int('rest_tcp_port');
     my $handle = HTTP::Daemon->new(LocalPort => $server_port,
                                             Type      => SOCK_STREAM,
@@ -331,7 +326,7 @@ sub setup_tcp_socket() {
                                             Listen    => 1 )
         or die "Couldn't be a tcp server on port $server_port : $@\n";
     $server->{handle} = $handle;
-    log_to_console("Server started on " . fileno($handle), 1);
+    log_to_console("HTTP server started on port " . $server_port, 1);
 
     # Add handler for server connections
     my $tag = Irssi::input_add(fileno($handle),
@@ -340,13 +335,12 @@ sub setup_tcp_socket() {
 
     $server->{tag} = $tag;
     %connections = ();
-    log_to_console("Rest api set up in HTTP mode");
 }
 
-sub handle_connection() {
-    my $server = shift;
+sub handle_connection {
+    my ($server) = @_;
     my $handle = $server->{handle}->accept();
-
+    $handle->timeout(1);
     log_to_console("Client connected on " . fileno($handle));
 
     my $connection = {
@@ -362,8 +356,11 @@ sub handle_connection() {
     $connections{$tag} = $connection;
 }
 
-sub handle_message($) {
-    my $connection = shift;
+sub handle_message {
+    my ($connection) = @_;
+    unless ($connection->{handle}->connected()) {
+        return;
+    }
     if ($connection->{frame}) {
         handle_websocket_message($connection);
     } else {
@@ -372,31 +369,29 @@ sub handle_message($) {
 }
 
 sub destroy_connections {
-    foreach (keys %connections) {
+    foreach (keys(%connections)) {
         destroy_connection($connections{$_});
     }
 }
 
 sub destroy_connection {
-    my $connection = shift;
+    my ($connection) = @_;
     my $tag = $connection->{tag};
-    log_to_console("Destroying client connection $tag");
     destroy_socket($connection);
     delete($connections{$tag});
 }
 
 sub destroy_socket {
-    my $socket = shift;
+    my ($socket) = @_;
     Irssi::input_remove($socket->{tag});
-    undef($socket->{tag});
-    if (defined $socket->{handle}) {
+    delete($socket->{tag});
+    if (defined($socket->{handle})) {
         close($socket->{handle});
-        undef($socket->{handle});
+        delete($socket->{handle});
     }
 }
 
 sub destroy_server {
-    log_to_console("Destroying server");
     destroy_socket($server);
 }
 
@@ -411,12 +406,10 @@ sub destroy_sockets {
 ##
 sub UNLOAD() {
     destroy_sockets();
-    log_to_console("$VERSION unloaded");
 }
 
 sub log_to_console {
-    my $message = shift;
-    my $level = shift;
+    my ($message, $level) = @_;
     Irssi::print("%B>>%n $IRSSI{name} $message", MSGLEVEL_CLIENTCRAP);
 }
 
