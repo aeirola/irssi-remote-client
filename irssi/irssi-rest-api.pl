@@ -138,17 +138,6 @@ sub perform_command {
                 $window->print($data);
             }
         }
-    } else {
-        $json = {
-            "GET" => {
-                "windows" => "List all windows",
-                "windows/[window_id]" => "List window content",
-                "windows/[window_id]/lines?timestamp=[limit]" => "List window lines",
-            },
-            "POST" => {
-                "windows/[id]" => "Post message to window"
-            }
-        };
     }
 
     return $json;
@@ -234,7 +223,10 @@ sub handle_http_request {
     }
 
     unless (isAuthenticated($request)) {
-        $client->send_error(RC_UNAUTHORIZED);
+        my $response = HTTP::Response->new(RC_UNAUTHORIZED);
+        $response->header('Content-Type' => 'application/json');
+        $response->content("\n");
+        $client->send_response($response);
         return;
     }
 

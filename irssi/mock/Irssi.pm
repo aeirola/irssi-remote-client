@@ -1,22 +1,21 @@
 package Irssi;
 
-use threads;
-use threads::shared;
+use Data::Dumper;
 use IO::Select;
-use Data::Dumper; # dbug prints
+use Irssi::Window;
+use Irssi::WindowItem;
 
 # Constants
 use base 'Exporter';
 use constant (MSGLEVEL_CLIENTCRAP => 0);
 
 # Variables
-our (%settings, @console, $thread, $select);
+our (%settings, %windows, @console, $select, %signal_listeners, %input_listeners);
 
 our @EXPORT = qw( MSGLEVEL_CLIENTCRAP );
 our @EXPORT_OK = qw( %signal_listeners %input_listeners @console);
 
-
-$select = IO::Select->new($source);
+$select = IO::Select->new();
 
 
 # Functions
@@ -42,12 +41,8 @@ sub settings_get_str {
 	return $settings{$key};
 }
 
-sub _handle_input {
-	while(1) {
-		@ready = $select->can_read(1);
-		unless (scalar(keys(%input_listeners))) {
-			return;
-		}
+sub _handle {
+	while(@ready = $select->can_read(0.1)) {
 		foreach $fh (@ready) {
 			my $listener = $input_listeners{$fh};
 			my $func = $listener->{'func'};
@@ -61,9 +56,6 @@ sub input_add {
 	my ($source, $condition, $func, $data) = @_;
 	$select->add($source);
 	$input_listeners{$source} = {'func' => $func, 'data' => $data};
-	if (!defined($thread) and (threads->tid() == 0)) {
-		$thread = threads->create('_handle_input');
-	}
 	return $source;
 }
 
@@ -71,9 +63,6 @@ sub input_remove {
 	my ($tag) = @_;
 	$select->remove($tag);
 	delete($input_listeners{$tag});
-	if (scalar(keys(%input_listener)) == 0 && defined($thread)) {
-		#$thread->join();
-	}
 }
 
 sub signal_add_last {
@@ -86,8 +75,18 @@ sub trigger_signal {
 	&func();
 }
 
-sub windows {}
-sub window_find_refnum {}
+sub windows {
+	return values(%windows);
+}
+sub window_find_refnum {
+	my ($refnum) = @_;
+	return $windows{$refnum};
+}
+sub set_window {
+	my ($window) = @_;
+	$windows{$window->{refnum}} = $window;
+}
+
 
 sub INPUT_READ {
 	1;
