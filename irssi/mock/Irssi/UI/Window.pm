@@ -2,7 +2,6 @@ package Irssi::UI::Window;
 
 use Irssi::WindowItem;
 # https://github.com/shabble/irssi-docs/wiki/Window
-# https://github.com/shabble/irssi-docs/blob/master/Irssi/UI/Window.pod
 
 sub new {
 	my $class = shift;

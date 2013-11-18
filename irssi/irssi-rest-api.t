@@ -11,7 +11,7 @@ use Test::More qw( no_plan );
 # Mock some stuff
 BEGIN { push @INC,"./mock";}
 use Irssi qw( %input_listeners %signal_listeners @console);
-use Irssi::Window;
+use Irssi::UI::Window;
 use Irssi::WindowItem;
 
 # Load script
@@ -38,8 +38,8 @@ $ua->default_header('Secret' => Irssi::settings_get_str('rest_password'));
 is_response('url' => '/', 'test_name' => 'Authorized request');
 is_response('url' => '/windows', 'data' => [], 'test_name' => 'Get empty windows');
 
-Irssi::set_window(Irssi::Window->new(1, '(status)'));
-Irssi::set_window(Irssi::Window->new(2, '#channel'));
+Irssi::_set_window(Irssi::UI::Window->new(1, '(status)'));
+Irssi::_set_window(Irssi::UI::Window->new(2, '#channel'));
 is_response('url' => '/windows', 'test_name' => 'Get windows', 'data' => [{
 		'refnum' => 1,
 		'type' => 'EMPTY',

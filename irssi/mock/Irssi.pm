@@ -1,8 +1,10 @@
 package Irssi;
+# https://github.com/shabble/irssi-docs/wiki/Irssi
+# https://github.com/shabble/irssi-docs/blob/master/Irssi.pod
 
 use Data::Dumper;
 use IO::Select;
-use Irssi::Window;
+use Irssi::UI::Window;
 use Irssi::WindowItem;
 
 # Constants
@@ -82,7 +84,7 @@ sub window_find_refnum {
 	my ($refnum) = @_;
 	return $windows{$refnum};
 }
-sub set_window {
+sub _set_window {
 	my ($window) = @_;
 	$windows{$window->{refnum}} = $window;
 }
