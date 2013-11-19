@@ -84,12 +84,10 @@ sub perform_command {
             my $window = $_;
             my @items = $window->items();
             my $item = $items[0];
-
             my $windowJson = {
                 "refnum" => $window->{refnum},
                 "type" => $item->{type} || "EMPTY",
-                "name" => $item->{name} || $window->{name},
-                "topic" => $item->{topic}
+                "name" => $item->{name} || $window->{name}
             };
             push(@$json, $windowJson);
         }
@@ -102,16 +100,18 @@ sub perform_command {
             $json = {
                 "refnum" => $window->{refnum},
                 "type" => $item->{type} || "EMPTY",
-                "name" => $item->{name} || $window->{name},
-                "topic" => $item->{topic}
+                "name" => $item->{name} || $window->{name}
             };
 
-            # Nicks
-            if ($item->{type}) {
+            # Channels
+            if (defined($item->{type}) && $item->{type} eq "CHANNEL") {
+                $json->{topic} = $item->{topic};
+
                 my $nicksJson = [];
-                my @nicks = $item->nicks();
-                foreach (@nicks) {
-                    push(@$nicksJson, $_->{nick});
+                foreach ($item->nicks()) {
+                    if ($_) {
+                        push(@$nicksJson, $_->{nick});
+                    }
                 }
                 $json->{'nicks'} = $nicksJson;
             }
@@ -157,8 +157,8 @@ sub getWindowLines {
     my $timestampLimit =  $request->uri->query_param("timestamp");
     $timestampLimit = $timestampLimit ? $timestampLimit : 0;
 
-    # Return empty if no new lines
-    if ($line->{info}->{time} <= $timestampLimit) {
+    # Return empty if no (new) lines
+    if (!defined($line) || $line->{info}->{time} <= $timestampLimit) {
         return [];
     }
 

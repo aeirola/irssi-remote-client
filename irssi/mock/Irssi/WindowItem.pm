@@ -6,11 +6,11 @@ use Irssi::TextUI::TextBufferView;
 
 sub new {
 	my $class = shift;
-	my ($type, $name) = @_;
+	my $args = @_;
 	my $self = bless {
-		type => '$type',
-		name => '$name'
+		name => $args{name}
 		}, $class;
+	$self->{type} = undef;
 	return $self;
 }
 

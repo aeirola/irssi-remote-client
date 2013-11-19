@@ -85,7 +85,7 @@ sub window_find_refnum {
 	return $windows{$refnum};
 }
 sub _set_window {
-	my ($window) = @_;
+	my $window = Irssi::UI::Window->new(@_);
 	$windows{$window->{refnum}} = $window;
 }
 

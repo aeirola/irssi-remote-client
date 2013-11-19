@@ -11,8 +11,6 @@ use Test::More qw( no_plan );
 # Mock some stuff
 BEGIN { push @INC,"./mock";}
 use Irssi qw( %input_listeners %signal_listeners @console);
-use Irssi::UI::Window;
-use Irssi::WindowItem;
 
 # Load script
 our ($VERSION, %IRSSI);
@@ -38,28 +36,36 @@ $ua->default_header('Secret' => Irssi::settings_get_str('rest_password'));
 is_response('url' => '/', 'test_name' => 'Authorized request');
 is_response('url' => '/windows', 'data' => [], 'test_name' => 'Get empty windows');
 
-Irssi::_set_window(Irssi::UI::Window->new(1, '(status)'));
-Irssi::_set_window(Irssi::UI::Window->new(2, '#channel'));
+Irssi::_set_window('refnum' => 1, 'type' => undef, 'name' => '(status)');
+Irssi::_set_window('refnum' => 2, 'type' => 'CHANNEL', 'name' => '#channel', 
+				   'topic' => 'Something interesting', 'lines' => ['line']);
 is_response('url' => '/windows', 'test_name' => 'Get windows', 'data' => [{
 		'refnum' => 1,
 		'type' => 'EMPTY',
-		'name' => '(status)',
-		'topic' => undef
+		'name' => '(status)'
 	},{
 		'refnum' => 2,
-		'type' => 'EMPTY',
-		'name' => '#channel',
-		'topic' => undef
+		'type' => 'CHANNEL',
+		'name' => '#channel'
 	}]);
-is_response('url' => '/windows/1', 'test_name' => 'Get window data', 'data' => {
+is_response('url' => '/windows/1', 'test_name' => 'Get status window data', 'data' => {
 		'refnum' => 1,
 		'type' => 'EMPTY',
 		'name' => '(status)',
-		'topic' => undef,
 		'lines' => []
 	});
+is_response('url' => '/windows/2', 'test_name' => 'Get channel window data', 'data' => {
+		'refnum' => 2,
+		'type' => 'CHANNEL',
+		'name' => '#channel',
+		'topic' => 'Something interesting',
+		'nicks' => [],
+		'lines' => [{'timestamp' => 1, 'text' => 'line'}]
+	});
 is_response('url' => '/windows/asdfasdf', 'test_name' => 'Get nonexistent window data');
-is_response('url' => '/windows/1/lines', 'test_name' => 'Get window lines', 'data' => []);
+is_response('url' => '/windows/2/lines', 'test_name' => 'Get window lines', 'data' => [
+	{'timestamp' => 1, 'text' => 'line'}
+	]);
 
 
 

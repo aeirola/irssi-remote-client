@@ -4,5 +4,14 @@ package Irssi::TextUI::TextBufferView;
 
 use Irssi::TextUI::TextBuffer;
 
+sub new {
+	my $class = shift;
+	my %args = @_;
+	my $buffer = Irssi::TextUI::TextBuffer->new('lines' => $args{lines});
+	my $self = bless {
+		buffer => $buffer
+		}, $class;
+	return $self;
+}
 
 1;
