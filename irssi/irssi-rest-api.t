@@ -33,41 +33,45 @@ my $base_url = 'http://localhost:10000';
 is_response('url' => '/', 'code' => 401, 'test_name' => 'Unauthorized request');
 
 $ua->default_header('Secret' => Irssi::settings_get_str('rest_password'));
-is_response('url' => '/', 'test_name' => 'Authorized request');
-is_response('url' => '/windows', 'data' => [], 'test_name' => 'Get empty windows');
+is_response('url' => '/', 'code' => 404, 'test_name' => 'Invalid path');
+is_response('url' => '/rpc', 'code' => 200, 'test_name' => 'getWindows', 'method' => 'POST',
+	'body' => '{"jsonrpc": "2.0", "method": "getWindows", "id": 1}',
+	'data' => {"jsonrpc" => "2.0", "result" => [], "id" => 1});
+#is_response('url' => '/', 'test_name' => 'Authorized request');
+#is_response('url' => '/windows', 'data' => [], 'test_name' => 'Get empty windows');
 
 Irssi::_set_window('refnum' => 1, 'type' => undef, 'name' => '(status)');
 Irssi::_set_window('refnum' => 2, 'type' => 'CHANNEL', 'name' => '#channel', 
 				   'topic' => 'Something interesting', 'lines' => ['line']);
-is_response('url' => '/windows', 'test_name' => 'Get windows', 'data' => [{
-		'refnum' => 1,
-		'type' => 'EMPTY',
-		'name' => '(status)'
-	},{
-		'refnum' => 2,
-		'type' => 'CHANNEL',
-		'name' => '#channel'
-	}]);
-is_response('url' => '/windows/1', 'test_name' => 'Get status window data', 'data' => {
-		'refnum' => 1,
-		'type' => 'EMPTY',
-		'name' => '(status)',
-		'lines' => []
-	});
-is_response('url' => '/windows/2', 'test_name' => 'Get channel window data', 'data' => {
-		'refnum' => 2,
-		'type' => 'CHANNEL',
-		'name' => '#channel',
-		'topic' => 'Something interesting',
-		'nicks' => [],
-		'lines' => [{'timestamp' => 1, 'text' => 'line'}]
-	});
-is_response('url' => '/windows/asdfasdf', 'test_name' => 'Get nonexistent window data');
-is_response('url' => '/windows/2/lines', 'test_name' => 'Get window lines', 'data' => [
-	{'timestamp' => 1, 'text' => 'line'}
-	]);
+# is_response('url' => '/windows', 'test_name' => 'Get windows', 'data' => [{
+# 		'refnum' => 1,
+# 		'type' => 'EMPTY',
+# 		'name' => '(status)'
+# 	},{
+# 		'refnum' => 2,
+# 		'type' => 'CHANNEL',
+# 		'name' => '#channel'
+# 	}]);
+# is_response('url' => '/windows/1', 'test_name' => 'Get status window data', 'data' => {
+# 		'refnum' => 1,
+# 		'type' => 'EMPTY',
+# 		'name' => '(status)',
+# 		'lines' => []
+# 	});
+# is_response('url' => '/windows/2', 'test_name' => 'Get channel window data', 'data' => {
+# 		'refnum' => 2,
+# 		'type' => 'CHANNEL',
+# 		'name' => '#channel',
+# 		'topic' => 'Something interesting',
+# 		'nicks' => [],
+# 		'lines' => [{'timestamp' => 1, 'text' => 'line'}]
+# 	});
+# is_response('url' => '/windows/asdfasdf', 'test_name' => 'Get nonexistent window data');
+# is_response('url' => '/windows/2/lines', 'test_name' => 'Get window lines', 'data' => [
+# 	{'timestamp' => 1, 'text' => 'line'}
+# 	]);
 
-is_response('method' => 'POST', 'url' => '/windows/2/', 'test_name' => 'Get window lines', 'body' => "hello");
+# is_response('method' => 'POST', 'url' => '/windows/2/', 'test_name' => 'Get window lines', 'body' => "hello");
 
 
 

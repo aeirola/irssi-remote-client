@@ -12,7 +12,7 @@ use URI;
 use URI::QueryParam;
 
 use Protocol::WebSocket;
-use JSON;           # Producing JSON output
+use JSON::RPC::Common::Marshal::HTTP;
 
 use vars qw($VERSION %IRSSI);
 
@@ -65,6 +65,36 @@ sub print_text_event {
 ##
 #   Command handling
 ##
+
+{
+    package Irssi::JSON::RPC::Commander;
+
+    sub new {
+        return bless {}, shift;
+    }
+
+    sub getWindows {
+        return [];
+    }
+
+    sub getWindow {
+        my ($self, $refnum) = @_;
+        return undef;
+    }
+
+    sub getWindowLines {
+        my ($self, $refnum, $timestamp) = @_;
+        return [];
+    }
+
+    sub sendMessage {
+        my ($self, $refnum, $message) = @_;
+    }
+}
+our $commander = Irssi::JSON::RPC::Commander->new();
+our $marshaller = JSON::RPC::Common::Marshal::HTTP->new();
+
+
 sub perform_command {
     my ($request) = @_;
     my $method = $request->method;
@@ -194,15 +224,15 @@ sub getWindowLines {
 sub handle_http_request {
     my ($connection) = @_;
     my $client = $connection->{handle};
-    my $request = $client->get_request();
+    my $http_request = $client->get_request();
 
-    unless ($request) {
+    unless ($http_request) {
         log_to_console("Closing connection: " . $client->reason, MSGLEVEL_CLIENTCRAP);
         destroy_connection($connection);
         return;
     }
 
-    unless (isAuthenticated($request)) {
+    unless (isAuthenticated($http_request)) {
         my $response = HTTP::Response->new(RC_UNAUTHORIZED);
         $response->header('Content-Type' => 'application/json');
         $response->content("\n");
@@ -210,8 +240,15 @@ sub handle_http_request {
         return;
     }
 
-    # Handle websocket initiations
-    if ($request->method eq "GET" && $request->url =~ /^\/websocket\/?$/) {
+    if ($http_request->url =~/^\/rpc\/?$/) {
+        # HTTP RPC calls
+        my $call = $marshaller->request_to_call($http_request);
+        my $res = $call->call($commander);
+        my $http_response = $marshaller->result_to_response($res);
+        $client->send_response($http_response);
+        return;
+    } elsif ($http_request->method eq "GET" && $http_request->url =~ /^\/websocket\/?$/) {
+        # Handle websocket initiations
         log_to_console("Starting websocket");
         my $hs = Protocol::WebSocket::Handshake::Server->new;
         my $frame = $hs->build_frame;
@@ -219,26 +256,19 @@ sub handle_http_request {
         $connection->{handshake} = $hs;
         $connection->{frame} = $frame;
 
-        $hs->parse($request->as_string);
+        $hs->parse($http_request->as_string);
         print $client $hs->to_string;
         $connection->{isWebsocket} = 1;
         log_to_console("WebSocket started");
 
         return;
-    }
-
-    my $response = HTTP::Response->new(RC_OK);
-    my $responseJson = perform_command($request);
-    $response->header('Content-Type' => 'application/json');
-    $response->header('Access-Control-Allow-Origin' => '*');
-
-    if ($responseJson) {
-        $response->content(to_json($responseJson, {utf8 => 1, pretty => 1}));
     } else {
+        # NOT found
+        my $response = HTTP::Response->new(RC_NOT_FOUND);
+        $response->header('Content-Type' => 'application/json');
         $response->content("\n");
+        $client->send_response($response);
     }
-
-    $client->send_response($response);
 }
 
 sub isAuthenticated {
@@ -325,7 +355,6 @@ sub setup_tcp_socket {
 sub handle_connection {
     my ($server) = @_;
     my $handle = $server->{handle}->accept();
-    $handle->timeout(1);
     log_to_console("Client connected on " . fileno($handle));
 
     my $connection = {
