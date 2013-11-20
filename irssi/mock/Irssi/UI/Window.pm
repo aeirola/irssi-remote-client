@@ -1,9 +1,10 @@
 package Irssi::UI::Window;
+# https://github.com/shabble/irssi-docs/wiki/Window
 
 use Irssi::Channel;
 use Irssi::Query;
 use Irssi::WindowItem;
-# https://github.com/shabble/irssi-docs/wiki/Window
+use Irssi::TextUI::TextBufferView;
 
 sub new {
 	my $class = shift;
@@ -41,7 +42,7 @@ sub view {
 }
 
 sub print {
-	
+
 }
 
 1;
