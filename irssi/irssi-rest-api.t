@@ -67,6 +67,8 @@ is_response('url' => '/windows/2/lines', 'test_name' => 'Get window lines', 'dat
 	{'timestamp' => 1, 'text' => 'line'}
 	]);
 
+is_response('method' => 'POST', 'url' => '/windows/2/', 'test_name' => 'Get window lines', 'body' => "hello");
+
 
 
 # Close
@@ -82,12 +84,22 @@ for (my $i = 0; $i < scalar(@console); $i++) {
 # Helpers
 sub is_response {
 	my %args = @_;
-	my $url = $args{'url'};
-	my $expected_code = $args{'code'} || '200';
-	my $expected_data = $args{'data'};
-	my $test_name = $args{'test_name'} || '';
+	my $method = $args{method} || 'GET';
+	my $url = $args{url};
+	my $body = $args{body};
+	my $expected_code = $args{code} || '200';
+	my $expected_data = $args{data};
+	my $test_name = $args{test_name} || '';
 
-	my $thread = async {$ua->get($base_url . $url)};
+	my $thread;
+	if ($method eq 'GET') {
+		$thread = async {$ua->get($base_url . $url)};
+	} elsif ($method eq 'POST') {
+		$thread = async {$ua->post($base_url . $url, 'Content' => $body)};
+	} else {
+		print "Undefined method " . $method;
+		return;
+	}
 	Irssi->_handle();
 	my $response = $thread->join();
 	is($response->code, $expected_code, $test_name. ' (code)');

@@ -40,4 +40,8 @@ sub view {
 	return shift->{_view};
 }
 
+sub print {
+	
+}
+
 1;
