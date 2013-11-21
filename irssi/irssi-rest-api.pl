@@ -1,23 +1,15 @@
 # irssi-client-api.pl -- enables remote control of irssi
-
 use strict;
-
 use Irssi;          # Interfacing with irssi
 
 use HTTP::Daemon;   # HTTP connections
 use HTTP::Status;   # HTTP Status codes
 use HTTP::Response; # HTTP Responses
-
-use URI;
-use URI::QueryParam;
-
-use Protocol::WebSocket;
 use JSON::RPC::Common::Marshal::HTTP;
+use Protocol::WebSocket;
 
-use vars qw($VERSION %IRSSI);
-
-$VERSION = '0.01';
-%IRSSI = (
+our $VERSION = '0.01';
+our %IRSSI = (
     authors     => 'Axel Eirola',
     contact     => 'axel.eirola@iki.fi',
     name        => 'irssi rest api',
@@ -27,20 +19,150 @@ $VERSION = '0.01';
     license     => 'Public Domain',
 );
 
-our ($server,           # Stores the server information
-     %connections,      # Stores client connections information
-);
+our $server = undef;        # Stores the server information
+our %connections = ();      # Stores client connections information
+our $commander = Irssi::JSON::RPC::Commander->new();
+our $marshaller = JSON::RPC::Common::Marshal::HTTP->new();
 
-sub add_settings {
+
+##
+#   Entry points
+##
+sub LOAD {
+    # Called at end of script
     Irssi::settings_add_int('rest', 'rest_tcp_port', 10000);
     Irssi::settings_add_str('rest', 'rest_password', 'd0ntLe@veM3');
-}
-
-sub setup {
-    add_settings();
+    Irssi::settings_add_str('rest', 'rest_log_level', 'INFO');
     setup_tcp_socket();
 
     Irssi::signal_add_last("print text", "print_text_event");
+}
+
+sub UNLOAD {
+    # Called by Irssi on unload
+    destroy_sockets();
+}
+
+sub RELOAD {
+    destroy_sockets();
+    setup_tcp_socket();
+}
+
+
+
+##
+#   Command handling
+##
+
+{
+    package Irssi::JSON::RPC::Commander;
+
+    sub new {
+        return bless {}, shift;
+    }
+
+    sub getWindows {
+        my ($self) = @_;
+        my @windows = [];
+        foreach my $window (Irssi::windows()) {
+            my @items = $window->items();
+            my $item = $items[0];
+            my %windowData = (
+                'refnum' => $window->{refnum},
+                'type' => $item->{type} || "EMPTY",
+                'name' => $item->{name} || $window->{name}
+            );
+            push(@windows, %windowData);
+        }
+        return @windows;
+    }
+
+    sub getWindow {
+        my ($self, $refnum) = @_;
+
+        my $window = Irssi::window_find_refnum($refnum);
+        unless ($window) {return;};
+
+        my @items = $window->items();
+        my $item = $items[0];
+
+        my %windowData = (
+            'refnum' => $window->{refnum},
+            'type' => $item->{type} || "EMPTY",
+            'name' => $item->{name} || $window->{name}
+        );
+
+        # Channels
+        if (defined($item->{type}) && $item->{type} eq "CHANNEL") {
+            $windowData{topic} = $item->{topic};
+
+            my @nicks = [];
+            foreach my $nick ($item->nicks()) {
+                push(@nicks, $nick->{nick});
+            }
+            $windowData{nicks} = @nicks;
+        }
+
+        $windowData{lines} = $self->getWindowLines($refnum);
+        return %windowData;
+    }
+
+    sub getWindowLines {
+        my ($self, $refnum, $timestampLimit) = @_;
+
+        my $window = Irssi::window_find_refnum($1);
+        my $view = $window->view;
+        my $buffer = $view->{buffer};
+        my $line = $buffer->{cur_line};
+
+        # Max lines
+        my $count = 100;
+
+        # Return empty if no (new) lines
+        if (!defined($line) || $line->{info}->{time} <= $timestampLimit) {
+            return [];
+        }
+
+        # Scroll backwards until we find first line we want to add
+        while($count) {
+            my $prev = $line->prev;
+            if ($prev and ($prev->{info}->{time} > $timestampLimit)) {
+                $line = $prev;
+                $count--;
+            } else {
+                # Break from loop if list ends
+                $count = 0;
+            }
+        }
+
+        my @linesArray = [];
+        # Scroll forwards and add all lines till end
+        while($line) {
+            push(@linesArray, {
+                "timestamp" => $line->{info}->{time},
+                "text" => $line->get_text(0),
+            });
+            $line = $line->next();
+        }
+
+        return @linesArray;
+    }
+
+    sub sendMessage {
+        my ($self, $refnum, $message) = @_;
+
+        # Say to channel on window
+        my $window = Irssi::window_find_refnum($refnum);
+        unless ($window) {return;};
+
+        my @items = $window->items();
+        my $item = $items[0];
+        if ($item->{type}) {
+            $item->command("msg * $message");
+        } else {
+            $window->print($message);
+        }
+    }
 }
 
 ##
@@ -58,164 +180,9 @@ sub print_text_event {
         "window" => $dest->{window}->{refnum},
         "text" => $formatted_text
     };
-    send_to_clients($json);
+    #send_to_clients($json);
 }
 
-
-##
-#   Command handling
-##
-
-{
-    package Irssi::JSON::RPC::Commander;
-
-    sub new {
-        return bless {}, shift;
-    }
-
-    sub getWindows {
-        return [];
-    }
-
-    sub getWindow {
-        my ($self, $refnum) = @_;
-        return undef;
-    }
-
-    sub getWindowLines {
-        my ($self, $refnum, $timestamp) = @_;
-        return [];
-    }
-
-    sub sendMessage {
-        my ($self, $refnum, $message) = @_;
-    }
-}
-our $commander = Irssi::JSON::RPC::Commander->new();
-our $marshaller = JSON::RPC::Common::Marshal::HTTP->new();
-
-
-sub perform_command {
-    my ($request) = @_;
-    my $method = $request->method;
-    my $url = $request->uri->path;
-
-    my $data = $request->content;
-
-    # Debug, write every processed command
-    log_to_console("received command: $method $url $data");
-
-    my $json;
-
-    if ($method eq "GET" && $url =~ /^\/windows\/?$/) {
-        # List all windows
-        $json = [];
-        foreach (Irssi::windows()) {
-            my $window = $_;
-            my @items = $window->items();
-            my $item = $items[0];
-            my $windowJson = {
-                "refnum" => $window->{refnum},
-                "type" => $item->{type} || "EMPTY",
-                "name" => $item->{name} || $window->{name}
-            };
-            push(@$json, $windowJson);
-        }
-    } elsif ($method eq "GET" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
-        my $window = Irssi::window_find_refnum($1);
-        if ($window) {
-            my @items = $window->items();
-            my $item = $items[0];
-
-            $json = {
-                "refnum" => $window->{refnum},
-                "type" => $item->{type} || "EMPTY",
-                "name" => $item->{name} || $window->{name}
-            };
-
-            # Channels
-            if (defined($item->{type}) && $item->{type} eq "CHANNEL") {
-                $json->{topic} = $item->{topic};
-
-                my $nicksJson = [];
-                foreach ($item->nicks()) {
-                    if ($_) {
-                        push(@$nicksJson, $_->{nick});
-                    }
-                }
-                $json->{'nicks'} = $nicksJson;
-            }
-
-            $json->{'lines'} = getWindowLines($window, $request);
-        }
-    } elsif ($method eq "GET" && $url =~ /^\/windows\/([0-9]+)\/lines\/?$/) {
-        my $window = Irssi::window_find_refnum($1);
-        if ($window) {
-            $json = getWindowLines($window, $request);
-        }
-    } elsif ($method eq "POST" && $url =~ /^\/windows\/([0-9]+)\/?$/) {
-        # Skip empty lines
-        return if $data =~ /^\s$/;
-        
-        # Say to channel on window
-        my $window = Irssi::window_find_refnum($1);
-        if ($window) {
-            my @items = $window->items();
-            my $item = $items[0];
-            if ($item->{type}) {
-                $item->command("msg * $data");
-            } else {
-                $window->print($data);
-            }
-        }
-    }
-
-    return $json;
-}
-
-sub getWindowLines {
-    my ($window, $request) = @_;
-
-    my $view = $window->view;
-    my $buffer = $view->{buffer};
-    my $line = $buffer->{cur_line};
-
-    # Max lines
-    my $count = 100;
-
-    # Limit by timestamp
-    my $timestampLimit =  $request->uri->query_param("timestamp");
-    $timestampLimit = $timestampLimit ? $timestampLimit : 0;
-
-    # Return empty if no (new) lines
-    if (!defined($line) || $line->{info}->{time} <= $timestampLimit) {
-        return [];
-    }
-
-    # Scroll backwards until we find first line we want to add
-    while($count) {
-        my $prev = $line->prev;
-        if ($prev and ($prev->{info}->{time} > $timestampLimit)) {
-            $line = $prev;
-            $count--;
-        } else {
-            # Break from loop if list ends
-            $count = 0;
-        }
-    }
-
-    my $linesArray = [];
-    # Scroll forwards and add all lines till end
-    while($line) {
-        push(@$linesArray, {
-            "timestamp" => $line->{info}->{time},
-            "text" => $line->get_text(0),
-        });
-        $line = $line->next();
-    }
-
-    return $linesArray;
-}
 
 
 ##
@@ -227,7 +194,7 @@ sub handle_http_request {
     my $http_request = $client->get_request();
 
     unless ($http_request) {
-        log_to_console("Closing connection: " . $client->reason, MSGLEVEL_CLIENTCRAP);
+        logg("Closing connection: " . $client->reason, MSGLEVEL_CLIENTCRAP);
         destroy_connection($connection);
         return;
     }
@@ -243,13 +210,14 @@ sub handle_http_request {
     if ($http_request->url =~/^\/rpc\/?$/) {
         # HTTP RPC calls
         my $call = $marshaller->request_to_call($http_request);
+        logg("received command: $call");
         my $res = $call->call($commander);
         my $http_response = $marshaller->result_to_response($res);
         $client->send_response($http_response);
         return;
     } elsif ($http_request->method eq "GET" && $http_request->url =~ /^\/websocket\/?$/) {
         # Handle websocket initiations
-        log_to_console("Starting websocket");
+        logg("Starting websocket");
         my $hs = Protocol::WebSocket::Handshake::Server->new;
         my $frame = $hs->build_frame;
         
@@ -259,13 +227,12 @@ sub handle_http_request {
         $hs->parse($http_request->as_string);
         print $client $hs->to_string;
         $connection->{isWebsocket} = 1;
-        log_to_console("WebSocket started");
+        logg("WebSocket started");
 
         return;
     } else {
         # NOT found
         my $response = HTTP::Response->new(RC_NOT_FOUND);
-        $response->header('Content-Type' => 'application/json');
         $response->content("\n");
         $client->send_response($response);
     }
@@ -299,33 +266,17 @@ sub handle_websocket_message {
                 my $hs = $connection->{handshake};
                 # Send close frame back
                 print $client $hs->build_frame(type => 'close', version => 'draft-ietf-hybi-17')->to_bytes;
-                return;
             } else {
                 # Handle message
-                my $json = from_json($message, {utf8 => 1});
+                my $call = $marshaller->json_to_call($message);
+                logg("received command: $call");
+                my $res = $call->call($commander);
+                my $json_response = $marshaller->return_to_json($res);
+                $client->send_response($json_response);
             }
         }
     } else {
         destroy_connection($connection);
-    }
-}
-
-sub send_to_client {
-    my ($message, $connection) = @_;
-    my $client = $connection->{handle};
-    my $frame = $connection->{frame};
-
-    print $client $frame->new($message)->to_bytes();
-}
-
-sub send_to_clients {
-    my ($json) = @_;
-    my $message = to_json($json, {utf8 => 1, pretty => 1});
-    foreach (keys %connections) {
-        my $connection = $connections{$_};
-        if ($connection->{isWebsocket}) {
-            send_to_client($message, $connection);
-        }
     }
 }
 
@@ -341,7 +292,7 @@ sub setup_tcp_socket {
                                             Listen    => 1 )
         or die "Couldn't be a tcp server on port $server_port : $@\n";
     $server->{handle} = $handle;
-    log_to_console("HTTP server started on port " . $server_port, 1);
+    logg("HTTP server started on port " . $server_port, 1);
 
     # Add handler for server connections
     my $tag = Irssi::input_add(fileno($handle),
@@ -355,7 +306,7 @@ sub setup_tcp_socket {
 sub handle_connection {
     my ($server) = @_;
     my $handle = $server->{handle}->accept();
-    log_to_console("Client connected on " . fileno($handle));
+    logg("Client connected on " . fileno($handle));
 
     my $connection = {
         "handle" => $handle,
@@ -405,29 +356,20 @@ sub destroy_socket {
     }
 }
 
-sub destroy_server {
-    destroy_socket($server);
-}
-
 sub destroy_sockets {
     destroy_connections();
-    destroy_server();
+    destroy_socket($server);
 }
 
 
 ##
 #   Misc stuff
 ##
-sub UNLOAD() {
-    destroy_sockets();
-}
-
-sub log_to_console {
+sub logg {
     my ($message, $level) = @_;
-    Irssi::print("%B>>%n $IRSSI{name} $message", MSGLEVEL_CLIENTCRAP);
+    Irssi::print("%B>>%n $IRSSI{name}: $message", MSGLEVEL_CLIENTCRAP);
 }
 
-# Setup on load
-setup();
-
+# Run
+LOAD();
 1;
