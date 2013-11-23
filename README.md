@@ -13,17 +13,6 @@ The client interface can be tested with static data at client-js/?url=test_data/
 
 
 
-TODO:
------
- - Add long-polling stuff
- - Salted password hashing
- - Add tests for websocket stuff
- - Fix test threading so that connection keep-alive will be used
- - OOO Modular structure: commands, tcp handling, http handling, websocket handling, rpc handling
-
-
-
-
 JSON-RPC API
 ------------
 

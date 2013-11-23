@@ -1,0 +1,32 @@
+TODO:
+-----
+ - Add long-polling stuff
+ - Salted password hashing
+ - Add tests for websocket stuff
+ - Fix test threading so that connection keep-alive will be used
+ - OOO Modular structure: commands, tcp handling, http handling, websocket handling, rpc handling
+
+
+Requirements:
+ * Try::Tiny
+ * HTTP::Daemon
+ * HTTP::Status
+ * HTTP::Response
+ * JSON::RPC::Common::Marshal::HTTP
+ * Protocol::WebSocket
+
+
+
+
+Testing:
+--------
+
+Requirements:
+ * Test::More
+ * JSON
+ * LWP::UserAgent
+
+Run tests with `perl irssi-rest-api.t`
+
+Tests use mocked versions of the Irssi perl interfaces. These interfaces are not complete, and only implement the bare functions used by the script.
+
