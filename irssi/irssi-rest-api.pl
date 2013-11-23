@@ -167,11 +167,11 @@ sub RELOAD {
 
         my @items = $window->items();
         my $item = $items[0];
-        if ($item->{type}) {
+        if (defined($item->{type}) && $item->{type} eq "CHANNEL" || $item->{type} eq "QUERY") {
             $item->command("msg * $message");
-        } else {
-            $window->print($message);
         }
+
+        return undef;
     }
 }
 

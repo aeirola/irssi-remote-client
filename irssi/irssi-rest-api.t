@@ -77,8 +77,8 @@ is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2}, 'result' => [
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 404}, 'result' => []);
 
 # sendMessage
-is_jrpc('method' => 'sendMessage', 'params' => {'refnum' => 2, 'message' => 'hello'}, 'result' => []);
-
+is_jrpc('method' => 'sendMessage', 'params' => {'refnum' => 2, 'message' => 'hello'});
+is_commands('refnum' => 2, 'commands' => ['msg * hello']);
 
 
 # Close
@@ -88,7 +88,7 @@ is(scalar(keys(%input_listeners)), 0, 'Socket input listener cleaned up');
 # Write log
 print("Console output: \n");
 for (my $i = 0; $i < scalar(@console); $i++) {
-	print($console[$i]."\n");
+	#print($console[$i]."\n");
 }
 
 # Helpers
@@ -109,8 +109,8 @@ sub is_jrpc {
 	my $response = $thread->join();
 
 	my $content = JSON::decode_json($response->content);
-	is($content->{error}, undef);
-	is_deeply($content->{result}, $result, $test_name);
+	is($content->{error}, undef, $test_name . ' (errors)');
+	is_deeply($content->{result}, $result, $test_name . ' (data)');
 }
 
 sub is_response {
@@ -134,4 +134,17 @@ sub is_response {
 	is($response->code, $expected_code, $test_name. ' (code)');
 	my $data = $response->content;
 	is($data, $expected_data, $test_name. ' (data)');
+}
+
+sub is_commands {
+	my %args = @_;
+	my $refnum = $args{refnum};
+	my @commands = $args{commands};
+
+	my $window = Irssi::window_find_refnum($refnum);
+	my @window_items = $window->items();
+	my $window_item = $window_items[0];
+
+	is_deeply($window_item->{_commands}, @commands, 'Check commands');
+	$window_item->{_commands} = [];
 }

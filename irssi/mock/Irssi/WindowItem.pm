@@ -9,11 +9,13 @@ sub new {
 		name => $args{name}
 		}, $class;
 	$self->{type} = undef;
+	$self->{_commands} = [];
 	return $self;
 }
 
 sub command {
-
+	my ($self, $command) = @_;
+	push($self->{_commands}, $command);
 }
 
 1;
