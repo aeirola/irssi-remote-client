@@ -35,7 +35,7 @@ sub LOAD {
     Irssi::settings_add_str('rest', 'rest_log_level', 'INFO');
     setup_tcp_socket();
 
-    Irssi::signal_add_last("print text", "print_text_event");
+    Irssi::signal_add_last('print text', 'print_text_event');
 }
 
 sub UNLOAD {
@@ -64,25 +64,27 @@ sub RELOAD {
 
     sub getWindows {
         my ($self) = @_;
-        my @windows = [];
+        my @windows = ();
         foreach my $window (Irssi::windows()) {
             my @items = $window->items();
             my $item = $items[0];
-            my %windowData = (
+            my $windowData = {
                 'refnum' => $window->{refnum},
-                'type' => $item->{type} || "EMPTY",
+                'type' => $item->{type} || 'EMPTY',
                 'name' => $item->{name} || $window->{name}
-            );
-            push(@windows, %windowData);
+            };
+            push(@windows, $windowData);
         }
-        return @windows;
+        return \@windows;
     }
 
     sub getWindow {
-        my ($self, $refnum) = @_;
+        my $self = shift;
+        my %args = @_;
+        my $refnum = $args{refnum};
 
         my $window = Irssi::window_find_refnum($refnum);
-        unless ($window) {return;};
+        unless ($window) {return undef;};
 
         my @items = $window->items();
         my $item = $items[0];
@@ -97,22 +99,26 @@ sub RELOAD {
         if (defined($item->{type}) && $item->{type} eq "CHANNEL") {
             $windowData{topic} = $item->{topic};
 
-            my @nicks = [];
+            my @nicks;
             foreach my $nick ($item->nicks()) {
                 push(@nicks, $nick->{nick});
             }
-            $windowData{nicks} = @nicks;
+            $windowData{nicks} = \@nicks;
         }
 
-        $windowData{lines} = $self->getWindowLines($refnum);
-        return %windowData;
+        $windowData{lines} = $self->getWindowLines('refnum' => $refnum);
+        return \%windowData;
     }
 
     sub getWindowLines {
-        my ($self, $refnum, $timestampLimit) = @_;
+        my $self = shift;
+        my %args = @_;
+        my $refnum = $args{refnum};
+        my $timestampLimit = $args{timestampLimit} || 0;
 
-        my $window = Irssi::window_find_refnum($1);
-        my $view = $window->view;
+        my $window = Irssi::window_find_refnum($refnum);
+        unless ($window) {return [];};
+        my $view = $window->view();
         my $buffer = $view->{buffer};
         my $line = $buffer->{cur_line};
 
@@ -136,7 +142,7 @@ sub RELOAD {
             }
         }
 
-        my @linesArray = [];
+        my @linesArray;
         # Scroll forwards and add all lines till end
         while($line) {
             push(@linesArray, {
@@ -146,11 +152,14 @@ sub RELOAD {
             $line = $line->next();
         }
 
-        return @linesArray;
+        return \@linesArray;
     }
 
     sub sendMessage {
-        my ($self, $refnum, $message) = @_;
+        my $self = shift;
+        my %args = @_;
+        my $refnum = $args{refnum};
+        my $message = $args{message};
 
         # Say to channel on window
         my $window = Irssi::window_find_refnum($refnum);
@@ -178,8 +187,8 @@ sub print_text_event {
     my $formatted_text = "$hour:$min $stripped";
 
     my $json = {
-        "window" => $dest->{window}->{refnum},
-        "text" => $formatted_text
+        'window' => $dest->{window}->{refnum},
+        'text' => $formatted_text
     };
     #send_to_clients($json);
 }
@@ -215,19 +224,19 @@ sub handle_http_request {
 
     unless (isAuthenticated($http_request)) {
         $http_response = HTTP::Response->new(RC_UNAUTHORIZED);
-        logg("Unauthorized request");
+        logg('Unauthorized request', 'WARNING');
         return $http_response;
     }
 
     if ($http_request->url =~/^\/rpc\/?$/) {
         # HTTP RPC calls
         my $call = $marshaller->request_to_call($http_request);
-        logg("received command: " . $call->method);
+        logg('Received command: ' . $call->method);
         my $res = $call->call($commander);
         return $marshaller->result_to_response($res);
-    } elsif ($http_request->method eq "GET" && $http_request->url =~ /^\/websocket\/?$/) {
+    } elsif ($http_request->method eq 'GET' && $http_request->url =~ /^\/websocket\/?$/) {
         # Handle websocket initiations
-        logg("Starting websocket");
+        logg('Starting websocket');
         my $hs = Protocol::WebSocket::Handshake::Server->new;
         my $frame = $hs->build_frame;
         
@@ -238,7 +247,7 @@ sub handle_http_request {
         $hs->parse($http_request->as_string);
         print $handle $hs->to_string;
         $connection->{isWebsocket} = 1;
-        logg("WebSocket started");
+        logg('WebSocket started');
 
         return undef;
     } else {
@@ -315,7 +324,7 @@ sub setup_tcp_socket {
 sub handle_connection {
     my ($server) = @_;
     my $handle = $server->{handle}->accept();
-    logg("Client connected on " . fileno($handle));
+    logg("Client connected from " . $handle->peerhost());
 
     my $connection = {
         "handle" => $handle,

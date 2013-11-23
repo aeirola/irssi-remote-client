@@ -44,7 +44,7 @@ sub settings_get_str {
 }
 
 sub _handle {
-	while(@ready = $select->can_read(0.1)) {
+	while(@ready = $select->can_read(0.05)) {
 		foreach $fh (@ready) {
 			my $listener = $input_listeners{$fh};
 			my $func = $listener->{'func'};
