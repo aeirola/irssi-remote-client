@@ -25,7 +25,7 @@ sub new {
 	} else {
 		$item = Irssi::WindowItem->new();
 	}
-	$self->{_items} = $item;
+	$self->{active} = $item;
 
 	my $view = Irssi::TextUI::TextBufferView->new('lines' => $args{lines});
 	$self->{_view} = $view;
@@ -33,9 +33,10 @@ sub new {
 	return $self;
 }
 
-sub items {
-	return shift->{_items};
-};
+sub get_active_name {
+	my $self = shift;
+	return $self->{active}->{name} || $self->{name}
+}
 
 sub view {
 	return shift->{_view};

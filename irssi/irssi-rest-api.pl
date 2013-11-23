@@ -1,7 +1,9 @@
 # irssi-client-api.pl -- enables remote control of irssi
 use strict;
 use Irssi;          # Interfacing with irssi
+use Irssi::TextUI;  # Enable access to text history, Irssi::UI::Window->view is defined here!
 
+use Try::Tiny;
 use HTTP::Daemon;   # HTTP connections
 use HTTP::Status;   # HTTP Status codes
 use HTTP::Response; # HTTP Responses
@@ -30,7 +32,7 @@ our $marshaller = JSON::RPC::Common::Marshal::HTTP->new();
 ##
 sub LOAD {
     # Called at end of script
-    Irssi::settings_add_int('rest', 'rest_tcp_port', 10000);
+    Irssi::settings_add_int('rest', 'rest_port', 10000);
     Irssi::settings_add_str('rest', 'rest_password', 'd0ntLe@veM3');
     Irssi::settings_add_str('rest', 'rest_log_level', 'INFO');
     setup_tcp_socket();
@@ -66,12 +68,11 @@ sub RELOAD {
         my ($self) = @_;
         my @windows = ();
         foreach my $window (Irssi::windows()) {
-            my @items = $window->items();
-            my $item = $items[0];
+            my $item = $window->{active};
             my $windowData = {
                 'refnum' => $window->{refnum},
                 'type' => $item->{type} || 'EMPTY',
-                'name' => $item->{name} || $window->{name}
+                'name' => $window->get_active_name()
             };
             push(@windows, $windowData);
         }
@@ -81,18 +82,17 @@ sub RELOAD {
     sub getWindow {
         my $self = shift;
         my %args = @_;
-        my $refnum = $args{refnum};
+        my $refnum = $args{refnum} or die 'Missing parameter refnum';
 
         my $window = Irssi::window_find_refnum($refnum);
         unless ($window) {return undef;};
 
-        my @items = $window->items();
-        my $item = $items[0];
+        my $item = $window->{active};
 
         my %windowData = (
             'refnum' => $window->{refnum},
             'type' => $item->{type} || "EMPTY",
-            'name' => $item->{name} || $window->{name}
+            'name' => $window->get_active_name()
         );
 
         # Channels
@@ -113,17 +113,15 @@ sub RELOAD {
     sub getWindowLines {
         my $self = shift;
         my %args = @_;
-        my $refnum = $args{refnum};
+        my $refnum = $args{refnum} or die 'Missing parameter refnum';
         my $timestampLimit = $args{timestampLimit} || 0;
+        my $rowLimit = $args{rowLimit} || 100;
 
         my $window = Irssi::window_find_refnum($refnum);
         unless ($window) {return [];};
-        my $view = $window->view();
+        my $view = $window->view;
         my $buffer = $view->{buffer};
         my $line = $buffer->{cur_line};
-
-        # Max lines
-        my $count = 100;
 
         # Return empty if no (new) lines
         if (!defined($line) || $line->{info}->{time} <= $timestampLimit) {
@@ -131,14 +129,14 @@ sub RELOAD {
         }
 
         # Scroll backwards until we find first line we want to add
-        while($count) {
+        while($rowLimit) {
             my $prev = $line->prev();
             if ($prev and ($prev->{info}->{time} > $timestampLimit)) {
                 $line = $prev;
-                $count--;
+                $rowLimit--;
             } else {
                 # Break from loop if list ends
-                $count = 0;
+                $rowLimit = 0;
             }
         }
 
@@ -158,15 +156,14 @@ sub RELOAD {
     sub sendMessage {
         my $self = shift;
         my %args = @_;
-        my $refnum = $args{refnum};
-        my $message = $args{message};
+        my $refnum = $args{refnum} or die 'Missing parameter refnum';
+        my $message = $args{message} or die 'Missing parameter message';
 
         # Say to channel on window
         my $window = Irssi::window_find_refnum($refnum);
         unless ($window) {return;};
 
-        my @items = $window->items();
-        my $item = $items[0];
+        my $item = $window->{active};
         if (defined($item->{type}) && $item->{type} eq "CHANNEL" || $item->{type} eq "QUERY") {
             $item->command("msg * $message");
         }
@@ -204,7 +201,12 @@ sub handle_http_message {
     my $request = $clientConn->get_request();
 
     if ($request) {
-        my $response = handle_http_request($request, $connection);
+        my $response;
+        try {
+            $response = handle_http_request($request, $connection);
+        } catch {
+            $response = HTTP::Response->new(RC_INTERNAL_SERVER_ERROR);
+        };
         if ($response) {
             $clientConn->send_response($response);
             if ($response->header('connection') || '' eq 'close') {
@@ -228,7 +230,7 @@ sub handle_http_request {
         return $http_response;
     }
 
-    if ($http_request->url =~/^\/rpc\/?$/) {
+    if ($http_request->url =~/^\/rpc(\?.*)?$/) {
         # HTTP RPC calls
         my $call = $marshaller->request_to_call($http_request);
         logg('Received command: ' . $call->method);
@@ -239,7 +241,7 @@ sub handle_http_request {
         logg('Starting websocket');
         my $hs = Protocol::WebSocket::Handshake::Server->new;
         my $frame = $hs->build_frame;
-        
+
         my $handle = $connection->{handle};
         $connection->{handshake} = $hs;
         $connection->{frame} = $frame;
@@ -303,7 +305,7 @@ sub handle_websocket_message {
 #   Socket handling
 ##
 sub setup_tcp_socket {
-    my $server_port = Irssi::settings_get_int('rest_tcp_port');
+    my $server_port = Irssi::settings_get_int('rest_port');
     my $handle = HTTP::Daemon->new(LocalPort => $server_port,
                                             Type      => SOCK_STREAM,
                                             Reuse     => 1,
