@@ -9,7 +9,7 @@ use JSON;
 use Test::More;
 
 # Mock some stuff
-BEGIN { push @INC,"./mock";}
+BEGIN { push(@INC, './mock');}
 use Irssi qw( %input_listeners %signal_listeners @console);
 
 # Load script
