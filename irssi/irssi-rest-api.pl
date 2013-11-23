@@ -44,6 +44,7 @@ sub UNLOAD {
 }
 
 sub RELOAD {
+    # TODO: Add signal listener for settings change
     destroy_sockets();
     setup_tcp_socket();
 }
@@ -188,53 +189,61 @@ sub print_text_event {
 ##
 #   HTTP stuff
 ##
-sub handle_http_request {
+sub handle_http_message {
     my ($connection) = @_;
-    my $client = $connection->{handle};
-    my $http_request = $client->get_request();
+    my $clientConn = $connection->{handle};
+    my $request = $clientConn->get_request();
 
-    unless ($http_request) {
-        logg("Closing connection: " . $client->reason, MSGLEVEL_CLIENTCRAP);
+    if ($request) {
+        my $response = handle_http_request($request, $connection);
+        if ($response) {
+            $clientConn->send_response($response);
+            if ($response->header('connection') || '' eq 'close') {
+                logg("Closing connection: " . $response->status_line());
+                destroy_connection($connection);
+            }
+        }
+    } else {
+        logg("Closing connection: " . $clientConn->reason, MSGLEVEL_CLIENTCRAP);
         destroy_connection($connection);
-        return;
     }
+}
+
+sub handle_http_request {
+    my ($http_request, $connection) = @_;
+    my $http_response;
 
     unless (isAuthenticated($http_request)) {
-        my $response = HTTP::Response->new(RC_UNAUTHORIZED);
-        $response->header('Content-Type' => 'application/json');
-        $response->content("\n");
-        $client->send_response($response);
-        return;
+        $http_response = HTTP::Response->new(RC_UNAUTHORIZED);
+        logg("Unauthorized request");
+        return $http_response;
     }
 
     if ($http_request->url =~/^\/rpc\/?$/) {
         # HTTP RPC calls
         my $call = $marshaller->request_to_call($http_request);
-        logg("received command: $call");
+        logg("received command: " . $call->method);
         my $res = $call->call($commander);
-        my $http_response = $marshaller->result_to_response($res);
-        $client->send_response($http_response);
-        return;
+        return $marshaller->result_to_response($res);
     } elsif ($http_request->method eq "GET" && $http_request->url =~ /^\/websocket\/?$/) {
         # Handle websocket initiations
         logg("Starting websocket");
         my $hs = Protocol::WebSocket::Handshake::Server->new;
         my $frame = $hs->build_frame;
         
+        my $handle = $connection->{handle};
         $connection->{handshake} = $hs;
         $connection->{frame} = $frame;
 
         $hs->parse($http_request->as_string);
-        print $client $hs->to_string;
+        print $handle $hs->to_string;
         $connection->{isWebsocket} = 1;
         logg("WebSocket started");
 
-        return;
+        return undef;
     } else {
         # NOT found
-        my $response = HTTP::Response->new(RC_NOT_FOUND);
-        $response->content("\n");
-        $client->send_response($response);
+        return HTTP::Response->new(RC_NOT_FOUND);
     }
 }
 
@@ -255,24 +264,24 @@ sub isAuthenticated {
 ###
 sub handle_websocket_message {
     my ($connection) = @_;
-    my $client = $connection->{handle};
+    my $clientConn = $connection->{handle};
     my $frame = $connection->{frame};
 
-    my $rs = $client->sysread(my $chunk, 1024);
+    my $rs = $clientConn->sysread(my $chunk, 1024);
     if ($rs) {
         $frame->append($chunk);
         while (my $message = $frame->next) {
             if ($frame->is_close) {
                 my $hs = $connection->{handshake};
                 # Send close frame back
-                print $client $hs->build_frame(type => 'close', version => 'draft-ietf-hybi-17')->to_bytes;
+                print $clientConn $hs->build_frame(type => 'close', version => 'draft-ietf-hybi-17')->to_bytes;
             } else {
                 # Handle message
                 my $call = $marshaller->json_to_call($message);
-                logg("received command: $call");
+                logg("received command: " . $call->method);
                 my $res = $call->call($commander);
                 my $json_response = $marshaller->return_to_json($res);
-                $client->send_response($json_response);
+                $clientConn->send_response($json_response);
             }
         }
     } else {
@@ -329,7 +338,7 @@ sub handle_message {
     if ($connection->{frame}) {
         handle_websocket_message($connection);
     } else {
-        handle_http_request($connection);
+        handle_http_message($connection);
     }
 }
 
