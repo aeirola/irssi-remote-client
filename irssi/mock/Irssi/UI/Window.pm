@@ -19,7 +19,7 @@ sub new {
 	if (!defined($type)) {
 		$item = Irssi::WindowItem->new();
 	} elsif ($type eq "CHANNEL") {
-		$item = Irssi::Channel->new('name' => $args{name}, 'topic' => $args{topic});
+		$item = Irssi::Channel->new('name' => $args{name}, 'topic' => $args{topic}, 'nicks' => $args{nicks});
 	} elsif ($type eq "QUERY") {
 		$item = Irssi::Query->new();
 	} else {

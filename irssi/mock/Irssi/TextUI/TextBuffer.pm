@@ -8,13 +8,18 @@ sub new {
 	my $class = shift;
 	my %args = @_;
 
-	my $line;
-	if ($args{lines}) {
-		$line = Irssi::TextUI::Line->new('text' => $args{lines}[0]);
+	my $cur_line;
+	my $prev_line;
+	my $time = 1;
+	for my $line (@{$args{lines}}) {
+		$prev_line = $cur_line;
+		$cur_line = Irssi::TextUI::Line->new('text' => $line, 'time' => $time, 'prev' => $prev_line);
+		$prev_line->{_next} = $cur_line;
+		$time++;
 	}
 
 	my $self = bless {
-		cur_line => $line
+		cur_line => $cur_line
 		}, $class;
 	return $self;
 }

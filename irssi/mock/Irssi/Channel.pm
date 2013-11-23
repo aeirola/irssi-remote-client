@@ -12,7 +12,9 @@ sub new {
 	$self->{topic} = $args{topic};
 
 	my @nicknames;
-	push(@nicknames, Irssi::Nick->new('nick' => 'Spaceball'));
+	for my $nickName (@{$args{nicks}}) {
+		push(@nicknames, Irssi::Nick->new('nick' => $nickName));
+	}
 	$self->{_nicknames} = \@nicknames;
 
 	return $self;

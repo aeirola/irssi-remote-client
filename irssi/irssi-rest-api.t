@@ -38,7 +38,8 @@ is_jrpc('method' => 'getWindows', 'result' => []);
 
 Irssi::_set_window('refnum' => 1, 'type' => undef, 'name' => '(status)');
 Irssi::_set_window('refnum' => 2, 'type' => 'CHANNEL', 'name' => '#channel',
-				   'topic' => 'Something interesting', 'lines' => ['line']);
+					'topic' => 'Something interesting', 'nicks' => ['nick1', 'nick2'],
+					'lines' => ['line1', 'line2']);
 
 # getWindows
 is_jrpc('method' => 'getWindows', 'result' => [{
@@ -59,20 +60,20 @@ is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 1}, 'result' => {
 		'lines' => []
 	});
 is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 2}, 'result' => {
- 		'refnum' => 2,
- 		'type' => 'CHANNEL',
- 		'name' => '#channel',
- 		'topic' => 'Something interesting',
- 		'nicks' => ['Spaceball'],
- 		'lines' => [{'timestamp' => 1, 'text' => 'line'}]
- 	});
+		'refnum' => 2,
+		'type' => 'CHANNEL',
+		'name' => '#channel',
+		'topic' => 'Something interesting',
+		'nicks' => ['nick1', 'nick2'],
+		'lines' => [{'timestamp' => 1, 'text' => 'line1'}, 
+					{'timestamp' => 2, 'text' => 'line2'}]
+	});
 is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 404}, 'result' => undef);
 
 # getWindowLines
-is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2}, 'result' => [{
-		'timestamp' => 1,
-		'text' => 'line'
-	}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2}, 'result' => [
+	{'timestamp' => 1, 'text' => 'line1'},
+	{'timestamp' => 2, 'text' => 'line2'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 404}, 'result' => []);
 
 # sendMessage

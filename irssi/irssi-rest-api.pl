@@ -132,7 +132,7 @@ sub RELOAD {
 
         # Scroll backwards until we find first line we want to add
         while($count) {
-            my $prev = $line->prev;
+            my $prev = $line->prev();
             if ($prev and ($prev->{info}->{time} > $timestampLimit)) {
                 $line = $prev;
                 $count--;
