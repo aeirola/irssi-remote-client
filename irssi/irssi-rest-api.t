@@ -30,7 +30,7 @@ isnt(Irssi::settings_get_int('rest_port'), undef, 'Port setting added');
 
 # Check existence of listeners
 is(scalar(keys(%input_listeners)), 1, 'Socket input listener set up');
-ok(exists($signal_listeners{'print text'}), 'Print signal listener set up');
+is(scalar(keys(%signal_listeners)), 1, 'Print signal listener set up');
 
 
 # Check HTTP interface
@@ -99,6 +99,15 @@ is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 404}, 'result' => unde
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2}, 'result' => [
 	{'timestamp' => 1, 'text' => 'line1'},
 	{'timestamp' => 2, 'text' => 'line2'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 1},
+		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 10}, 'result' => []);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'rowLimit' => 1},
+		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 1, 'timeout' => 1000},
+		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 2, 'timeout' => 0},
+		'result' => []);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 404}, 'result' => []);
 
 # sendMessage

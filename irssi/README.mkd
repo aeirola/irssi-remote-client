@@ -2,10 +2,11 @@ TODO:
 -----
  - Add long-polling stuff
  - Salted password hashing
+ - Some abstraction for the transport protocol (HTTP, Websocket)
  - Add tests for websocket stuff
  - Fix test threading so that connection keep-alive will be used
  - OOO Modular structure: commands, tcp handling, http handling, websocket handling, rpc handling
-
+ - Correct JSON-RPC response codes
 
 Requirements:
  * Try::Tiny

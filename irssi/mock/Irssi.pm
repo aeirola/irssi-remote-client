@@ -3,6 +3,7 @@ package Irssi;
 # https://github.com/shabble/irssi-docs/blob/master/Irssi.pod
 
 use Data::Dumper;
+use Data::GUID;
 use IO::Select;
 use Irssi::UI::Window;
 use Irssi::WindowItem;
@@ -12,7 +13,7 @@ use base 'Exporter';
 use constant (MSGLEVEL_CLIENTCRAP => 0);
 
 # Variables
-our (%settings, %windows, @console, $select, %signal_listeners, %input_listeners);
+our (%settings, %windows, @console, $select, %signal_listeners, %input_listeners, %timeouts);
 
 our @EXPORT = qw( MSGLEVEL_CLIENTCRAP );
 our @EXPORT_OK = qw( %signal_listeners %input_listeners @console);
@@ -60,7 +61,6 @@ sub input_add {
 	$input_listeners{$source} = {'func' => $func, 'data' => $data};
 	return $source;
 }
-
 sub input_remove {
 	my ($tag) = @_;
 	$select->remove($tag);
@@ -69,12 +69,29 @@ sub input_remove {
 
 sub signal_add_last {
 	my ($sig_name, $func) = @_;
-	$signal_listeners{$sig_name} = $func;
+	my $tag = Data::GUID->new();
+	$signal_listeners{$tag} = $func;
+	return $tag;
 }
-sub trigger_signal {
+sub signal_remove {
+	my ($tag) = @_;
+	delete($signal_listeners{$tag});
+}
+sub _trigger_signal {
 	my ($sig_name) = @_;
 	my $func = $signal_listeners{$sig_name};
 	&func();
+}
+
+sub timeout_add_once {
+	my ($msecs, $func, $data) = @_;
+	my $tag = Data::GUID->new();
+	$timeouts{$tag} = $func;
+	return $tag;
+}
+sub timeout_remove {
+	my ($tag) = @_;
+	delete($timeouts{$tag});
 }
 
 sub windows {
