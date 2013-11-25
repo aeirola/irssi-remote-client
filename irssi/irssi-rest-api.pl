@@ -2,6 +2,7 @@
 
 use strict;
 
+use Irssi;          # Interfacing with irssi
 use JSON::RPC::Common::Marshal::HTTP;   # JSON-RPC handling
 
 our $VERSION = '0.01';
@@ -62,7 +63,6 @@ sub RELOAD {
 =cut
 	package Irssi::JSON::RPC::Commander;
 
-	use Irssi;          # Interfacing with irssi
 	use Irssi::TextUI;  # Enable access to scrollback history, Irssi::UI::Window->view is defined here!
 
 =pod
@@ -332,7 +332,6 @@ sub RELOAD {
 	#   HTTP stuff
 	##
 	
-	use Irssi;          # Interfacing with irssi
 	use Try::Tiny;      # try {} catch {}; structure
 
 	use HTTP::Daemon;   # HTTP connections
@@ -620,7 +619,7 @@ sub RELOAD {
 	#   Misc stuff
 	##
 
-	use Irssi;          # Interfacing with irssi
+	use Irssi qw( MSGLEVEL_CLIENTCRAP );
 
 =pod
 	Log line to irssi console
