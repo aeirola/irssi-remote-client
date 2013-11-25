@@ -1,4 +1,5 @@
 # irssi-client-api.pl -- enables remote control of irssi
+
 use strict;
 use Irssi;          # Interfacing with irssi
 use Irssi::TextUI;  # Enable access to scrollback history, Irssi::UI::Window->view is defined here!
@@ -10,8 +11,6 @@ use HTTP::Response; # HTTP Responses
 
 use JSON::RPC::Common::Marshal::HTTP;   # JSON-RPC handling
 use Protocol::WebSocket;                # Websocket connection handling
-
-our $DEFERRED_RETURN_VALUE;	# Magic value for not returning response directly
 
 our $VERSION = '0.01';
 our %IRSSI = (
@@ -33,6 +32,7 @@ our $marshaller;		# Stores the json-rpc marshaller
 #   Entry points
 ##
 
+
 =pod
 Called at start of script
 =cut
@@ -44,8 +44,8 @@ sub LOAD {
 	$commander = Irssi::JSON::RPC::Commander->new();
 	$marshaller = JSON::RPC::Common::Marshal::HTTP->new();
 
+	Irssi::signal_add_last("print text", \&handle_print_text_event);
 	setup_tcp_socket();
-	Irssi::signal_add_last('print text', \&print_text_event);
 }
 
 =pod
@@ -159,6 +159,34 @@ Returns:
 	a list of line objects containing timestamp and text
 <If timeout given and no lines available>:
 	a deferred response definition object
+
+
+
+=item Deferred return values flow
+
+getWindowLines
+ - registers an event listener for the new line event
+ - registers an timeout for the thing
+ - returns an hash
+	{
+		deferred: unique field oro object type!
+		timeout tag => $tag
+		event listener tag => $tag
+		resultHandler => undef (function)
+	}
+
+JSON handler
+ - intercepts response using deferred unique field
+ - adds appropriate resultHandler to the deferred definition event
+ - returns without response to client
+
+eventHandler is called from timeout or line event
+ - removes timeout
+ - removes event handler
+ - creates response data
+ - calls result handler
+
+
 =cut
 	sub getWindowLines {
 		my $self = shift;
@@ -178,8 +206,13 @@ Returns:
 		if (!defined($line) || $line->{info}->{time} <= $timestamp_limit) {
 			if ($timeout) {
 				# Wait for lines, return a deferred response definition object
-				Irssi::timeout_add_once($timeout*1000, \&handle_timeout, $refnum);
-				return \$DEFERRED_RETURN_VALUE;
+				my $deferred = Irssi::JSON::RPC::DeferredResponse->new();
+				my $event_handler = sub {
+					$deferred->handle_event();
+				};
+				$deferred->{timeout_tag} = Irssi::timeout_add_once($timeout*1000, $event_handler);
+				Irssi::JSON::RPC::EventHandler->add_text_listener($refnum, $event_handler);
+				return $deferred;
 			} else {
 				return [];
 			}
@@ -241,24 +274,72 @@ Named params:
 ##
 #   Event handling
 ##
+
+{
+	package Irssi::JSON::RPC::EventHandler;
+
+	our %text_listeners = ();# Stores deferred text events
+
 =pod
 Handles writing of message events to deferred responses
 =cut
-sub print_text_event {
-	#  "print text", TEXT_DEST_REC *dest, char *text, char *stripped
-	my ($dest, $text, $stripped) = @_;
+	sub handle_print_text_event {
+		#  "print text", TEXT_DEST_REC *dest, char *text, char *stripped
+		my ($dest) = @_;
 
-	# XXX: Should follow theme format
-	my ($sec,$min,$hour) = localtime(time);
-	my $formatted_text = "$hour:$min $stripped";
+		my $refnum = $dest->{window}->{refnum};
 
-	my $json = {
-		'window' => $dest->{window}->{refnum},
-		'text' => $formatted_text
-	};
-	#send_to_clients($json);
+		my $funs = $text_listeners{$refnum};
+		if (defined($funs)) {
+			delete($text_listeners{$refnum});
+
+			for my $fun ($funs) {
+				&fun(@_);
+			}
+		}
+
+		# XXX: Should follow theme format
+		#my ($sec,$min,$hour) = localtime(time);
+		#my $formatted_text = "$hour:$min $stripped";
+
+		#my $json = {
+		#	'window' => $dest->{window}->{refnum},
+		#	'text' => $formatted_text
+		#};
+		#send_to_clients($json);
+	}
+
+	sub add_text_listener {
+		my ($refnum, $deffered) = @_;
+		unless ($text_listeners{$refnum}) {
+			$text_listeners{$refnum} = [];
+		}
+
+		push($text_listeners{$refnum}, $deffered);
+	}
 }
 
+{
+	package Irssi::JSON::RPC::DeferredResponse;
+
+	sub new {
+		return bless {
+			'response_handler' => undef,
+			'timeout_tag' => undef
+			}, shift;
+	}
+
+	sub handle_event {
+		my ($self, $dest, $text, $formatted_text) = @_;
+		my $func = $self->{response_handler};
+		if ($dest) {
+			&$func($commander->getWindowLines('refnum' -> $dest->{window}->{refnum}));
+		} else {
+			my @array = ();
+			&$func(\@array);
+		}
+	}
+}
 
 ##
 #   HTTP stuff
@@ -320,7 +401,13 @@ sub handle_http_request {
 		my $call = $marshaller->request_to_call($http_request);
 		logg('Received command: ' . $call->method());
 		my $res = $call->call($commander);
-		if (defined($res->{result}) && $res->{result} == \$DEFERRED_RETURN_VALUE) {
+		if (ref($res->{result}) eq 'Irssi::JSON::RPC::DeferredResponse') {
+			$res->{result}->{response_handler} = sub {
+				$res->{result} = shift;
+				my $response = $marshaller->result_to_response($res);
+				my $client_conn = $connection->{handle};
+				$client_conn->send_response($response);
+			};
 			return undef;
 		} else {
 			return $marshaller->result_to_response($res);
@@ -396,7 +483,11 @@ sub handle_websocket_message {
 				my $call = $marshaller->json_to_call($message);
 				logg('received command: ' . $call->method());
 				my $res = $call->call($commander);
-				if ($res->{result} == \$DEFERRED_RETURN_VALUE) {
+				if (ref($res->{result}) eq 'Irssi::JSON::RPC::DeferredResponse') {
+					$res->{result}->{response_handler} = sub {
+						my $json_response = $marshaller->return_to_json(shift);
+						$client_conn->send_response($json_response);
+					};
 					return undef;
 				} else {
 					my $json_response = $marshaller->return_to_json($res);

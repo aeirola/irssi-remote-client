@@ -2,6 +2,7 @@ package Irssi;
 # https://github.com/shabble/irssi-docs/wiki/Irssi
 # https://github.com/shabble/irssi-docs/blob/master/Irssi.pod
 
+use threads;
 use Data::Dumper;
 use Data::GUID;
 use IO::Select;
@@ -45,7 +46,7 @@ sub settings_get_str {
 }
 
 sub _handle {
-	while(@ready = $select->can_read(0.05)) {
+	while(@ready = $select->can_read(0.1)) {
 		foreach $fh (@ready) {
 			my $listener = $input_listeners{$fh};
 			my $func = $listener->{'func'};
@@ -53,6 +54,8 @@ sub _handle {
 			&$func($data);
 		}
 	}
+
+	_fire_timeouts();
 }
 
 sub input_add {
@@ -92,6 +95,13 @@ sub timeout_add_once {
 sub timeout_remove {
 	my ($tag) = @_;
 	delete($timeouts{$tag});
+}
+sub _fire_timeouts {
+	keys(%timeouts);
+	while(my($tag, $func) = each(%timeouts)) {
+		delete($timeouts{$tag});
+		&$func($data);
+	}
 }
 
 sub windows {

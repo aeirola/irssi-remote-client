@@ -106,7 +106,7 @@ is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'rowLimit' => 
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 1, 'timeout' => 1000},
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
-is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 2, 'timeout' => 0},
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 2, 'timeout' => 100},
 		'result' => []);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 404}, 'result' => []);
 
