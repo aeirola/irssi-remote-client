@@ -147,32 +147,6 @@ sub RELOAD {
 		a list of line objects containing timestamp and text
 	<If timeout given and no lines available>:
 		a deferred response definition object
-
-
-
-	=item Deferred return values flow
-
-	getWindowLines
-	 - registers an event listener for the new line event
-	 - registers an timeout for the thing
-	 - returns an hash
-		{
-			deferred: unique field oro object type!
-			timeout tag => $tag
-			event listener tag => $tag
-			resultHandler => undef (function)
-		}
-
-	JSON handler
-	 - intercepts response using deferred unique field
-	 - adds appropriate resultHandler to the deferred definition event
-	 - returns without response to client
-
-	eventHandler is called from timeout or line event
-	 - removes timeout
-	 - removes event handler
-	 - creates response data
-	 - calls result handler
 =cut
 	sub getWindowLines {
 		my $self = shift;
@@ -313,7 +287,17 @@ sub RELOAD {
 
 {
 	package Irssi::JSON::RPC::DeferredResponse;
+=pod
+	Deferred responses are used to indicate that the request won't be responded to in the course of the current
+	event. This means that the connection will stay open, and the response will be sent when another Irssi event,
+	such as an timeout or signal-trigger occurs.
 
+	The method generating the data should create the DeferredResponse object and return it instead of normal data.
+	It should also register the listeners for the events that would cause the response to be sent.
+
+	The method handling the conversion form data to a response should add a function reference in 'response_handler'
+	field, which will be called with the deferred object and return data, when the response is to be sent.
+=cut
 	sub new {
 		my $class = shift;
 		my %args = @_;
