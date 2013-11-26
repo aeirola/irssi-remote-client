@@ -15,7 +15,7 @@ sub new {
 
 sub command {
 	my ($self, $command) = @_;
-	push($self->{_commands}, $command);
+	push(@{$self->{_commands}}, $command);
 }
 
 1;

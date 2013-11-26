@@ -108,9 +108,9 @@ is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimi
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 2, 'timeout' => 100},
 		'result' => []);
-Irssi::_add_signal('print text', [Irssi::window_find_refnum(2)->{_dest}, 'hi', 'hi']);
+Irssi::_add_hook(sub {Irssi::window_find_refnum(2)->print('hi')});
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 2, 'timeout' => 100},
-		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
+		'result' => [{'timestamp' => 3, 'text' => 'hi'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 404}, 'result' => []);
 
 # sendMessage

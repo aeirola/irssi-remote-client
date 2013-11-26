@@ -153,7 +153,7 @@ sub RELOAD {
 		my %args = @_;
 		my $refnum = $args{refnum} or die 'Missing parameter refnum';
 		my $timestamp_limit = $args{timestampLimit} || 0;
-		my $rowLimit = $args{rowLimit} || 100;
+		my $row_limit = $args{rowLimit} || 100;
 		my $timeout = $args{timeout};
 
 		my $window = Irssi::window_find_refnum($refnum);
@@ -172,8 +172,9 @@ sub RELOAD {
 					my $data;
 					if ($dest) {
 						Irssi::timeout_remove($deferred->{timeout_tag});
-						# TODO: timeouts and shit!
-						$data = $commander->getWindowLines('refnum' => $refnum, 'rowLimit' => 1);
+						$data = $commander->getWindowLines('refnum' => $refnum,
+														   'timestampLimit' => $timestamp_limit,
+														   'rowLimit' => $row_limit);
 					} else {
 						# Timed out, no content
 						Irssi::JSON::RPC::EventHandler::remove_text_listener($refnum);
@@ -182,7 +183,7 @@ sub RELOAD {
 					my $func = $deferred->{response_handler};
 					&$func($deferred, $data);
 				};
-				$deferred->{timeout_tag} = Irssi::timeout_add_once($timeout*1000, $event_handler);
+				$deferred->{timeout_tag} = Irssi::timeout_add_once($timeout*1000, $event_handler, undef);
 				$deferred->{event_tag} = Irssi::JSON::RPC::EventHandler::add_text_listener($refnum, $event_handler);
 				return $deferred;
 			} else {
@@ -191,14 +192,14 @@ sub RELOAD {
 		}
 
 		# Scroll backwards until we find first line we want to add
-		while($rowLimit > 1) {
+		while($row_limit > 1) {
 			my $prev = $line->prev();
 			if ($prev and ($prev->{info}->{time} > $timestamp_limit)) {
 				$line = $prev;
-				$rowLimit--;
+				$row_limit--;
 			} else {
 				# Break from loop if list ends
-				$rowLimit = 0;
+				$row_limit = 0;
 			}
 		}
 
@@ -275,7 +276,7 @@ sub RELOAD {
 			$text_listeners{$refnum} = [];
 		}
 
-		push($text_listeners{$refnum}, $deffered);
+		push(@{$text_listeners{$refnum}}, $deffered);
 	}
 
 	sub remove_text_listener {

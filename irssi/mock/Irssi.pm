@@ -14,7 +14,7 @@ use base 'Exporter';
 use constant (MSGLEVEL_CLIENTCRAP => 0);
 
 # Variables
-our (%settings, %windows, @console, $select, %signal_listeners, %input_listeners, %timeouts, @signals);
+our (%settings, %windows, @console, $select, %signal_listeners, %input_listeners, %timeouts, @hooks);
 
 our @EXPORT = qw( MSGLEVEL_CLIENTCRAP );
 our @EXPORT_OK = qw( %signal_listeners %input_listeners @console);
@@ -56,7 +56,7 @@ sub _handle {
 		}
 	}
 
-	_fire_signals();
+	_fire_hooks();
 	_fire_timeouts();
 }
 
@@ -81,17 +81,20 @@ sub signal_remove {
 	my ($tag) = @_;
 	delete($signal_listeners{$tag});
 }
-sub _add_signal {
-	my ($sig_name, $data) = @_;
-	push(@signals, [$sig_name, $data]);
+sub signal_emit {
+	my ($sig_name, @params) = @_;
+	my $func = $signal_listeners{$sig_name};
+	&$func(@params);
 }
-sub _fire_signals {
-	foreach my $signal (@signals) {
-		my ($sig_name, $data) = @$signal;
-		my $func = $signal_listeners{$sig_name};
-		&$func(@$data);
+sub _add_hook {
+	my ($func) = @_;
+	push(@hooks, $func);
+}
+sub _fire_hooks {
+	foreach my $func (@hooks) {
+		&$func();
 	}
-	@signals = ();
+	@hooks = ();
 }
 
 sub timeout_add_once {

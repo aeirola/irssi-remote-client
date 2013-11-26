@@ -44,7 +44,9 @@ sub view {
 }
 
 sub print {
-
+	my ($self, $text) = @_;
+	$self->{_view}->{buffer}->add_line($text);
+	Irssi::signal_emit('print text', ($self->{_dest}, $text, $text));
 }
 
 1;

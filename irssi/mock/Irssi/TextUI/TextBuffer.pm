@@ -24,4 +24,11 @@ sub new {
 	return $self;
 }
 
+sub add_line {
+	my ($self, $text) = @_;
+	my $cur_line = $self->{cur_line};
+	my $cur_time = $cur_line->{info}->{time};
+	$self->{cur_line} =  Irssi::TextUI::Line->new('text' => $text, 'time' => $cur_time+1, 'prev' => $cur_line);
+}
+
 1;
