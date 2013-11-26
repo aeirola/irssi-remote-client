@@ -19,10 +19,17 @@ our %IRSSI = (
 our $commander;			# Stores the object which contains the json-rpc commands
 our $marshaller;		# Stores the json-rpc marshaller
 
+# Irssi uses some shifty logic to determine the package of the function calling timeouts and such
+# This we must use this function reference to make the calls outside of the namespaces
+our $outside_call = sub {
+	my $func = shift;
+	return &$func(@_);
+};
+
+
 ##
 #   Entry points
 ##
-
 
 =pod
 Called at start of script
@@ -35,15 +42,15 @@ sub LOAD {
 	$commander = Irssi::JSON::RPC::Commander->new();
 	$marshaller = JSON::RPC::Common::Marshal::HTTP->new();
 
-	Irssi::signal_add_last("print text", sub {Irssi::JSON::RPC::EventHandler::handle_print_text_event(@_);});
-	Irssi::JSON::RPC::HTTP->setup_tcp_socket();
+	Irssi::signal_add_last("print text", \&Irssi::JSON::RPC::EventHandler::handle_print_text_event);
+	Irssi::JSON::RPC::HTTP::setup_tcp_socket();
 }
 
 =pod
 Called by Irssi at script unload time
 =cut
 sub UNLOAD {
-	Irssi::JSON::RPC::HTTP->destroy_sockets();
+	Irssi::JSON::RPC::HTTP::destroy_sockets();
 }
 
 =pod
@@ -52,9 +59,10 @@ Called when settings change
 # TODO: Add signal listener for settings change
 =cut
 sub RELOAD {
-	Irssi::JSON::RPC::HTTP->destroy_sockets();
-	Irssi::JSON::RPC::HTTP->setup_tcp_socket();
+	Irssi::JSON::RPC::HTTP::destroy_sockets();
+	Irssi::JSON::RPC::HTTP::setup_tcp_socket();
 }
+
 
 
 {
@@ -183,7 +191,8 @@ sub RELOAD {
 					my $func = $deferred->{response_handler};
 					&$func($deferred, $data);
 				};
-				$deferred->{timeout_tag} = Irssi::timeout_add_once($timeout*1000, $event_handler, undef);
+				$deferred->{timeout_tag} = &$outside_call(\&Irssi::timeout_add_once, 
+														$timeout*1000, $event_handler, undef);
 				$deferred->{event_tag} = Irssi::JSON::RPC::EventHandler::add_text_listener($refnum, $event_handler);
 				return $deferred;
 			} else {
@@ -311,6 +320,7 @@ sub RELOAD {
 	}
 }
 
+
 {
 	package Irssi::JSON::RPC::HTTP;
 	##
@@ -322,7 +332,7 @@ sub RELOAD {
 	use HTTP::Daemon;   # HTTP connections
 	use HTTP::Status;   # HTTP Status codes
 	use HTTP::Response; # HTTP Responses
-	
+
 	our $server;			# Stores the server information
 	our %connections = ();	# Stores client connections information
 
@@ -430,6 +440,7 @@ sub RELOAD {
 		}
 	}
 
+
 ##
 #   Socket handling
 ##
@@ -447,9 +458,8 @@ sub RELOAD {
 		Irssi::JSON::RPC::Misc::logg("HTTP server started on port " . $server_port, 1);
 
 		# Add handler for server connections
-		my $tag = Irssi::input_add(fileno($handle),
-									   Irssi::INPUT_READ,
-									   \&handle_connection, $server);
+		my $tag = &$outside_call(\&Irssi::input_add, fileno($handle), Irssi::INPUT_READ, 
+								 \&handle_connection, $server);
 
 		$server->{tag} = $tag;
 		%connections = ();
@@ -472,9 +482,8 @@ sub RELOAD {
 		};
 
 		# Add handler for connection messages
-		my $tag = Irssi::input_add(fileno($handle),
-									   Irssi::INPUT_READ,
-									   \&handle_message, $connection);
+		my $tag = &$outside_call(\&Irssi::input_add, fileno($handle), Irssi::INPUT_READ, 
+								 \&handle_message, $connection);
 		$connection->{tag} = $tag;
 		$connections{$tag} = $connection;
 	}
