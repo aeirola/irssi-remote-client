@@ -4,6 +4,7 @@ package Irssi::UI::Window;
 use Irssi::Channel;
 use Irssi::Query;
 use Irssi::WindowItem;
+use Irssi::UI::TextDest;
 use Irssi::TextUI::TextBufferView;
 
 sub new {
@@ -27,8 +28,8 @@ sub new {
 	}
 	$self->{active} = $item;
 
-	my $view = Irssi::TextUI::TextBufferView->new('lines' => $args{lines});
-	$self->{_view} = $view;
+	$self->{_view} = Irssi::TextUI::TextBufferView->new('lines' => $args{lines});
+	$self->{_dest} = Irssi::UI::TextDest->new('window' => $self);
 
 	return $self;
 }

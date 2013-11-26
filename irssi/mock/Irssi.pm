@@ -14,7 +14,7 @@ use base 'Exporter';
 use constant (MSGLEVEL_CLIENTCRAP => 0);
 
 # Variables
-our (%settings, %windows, @console, $select, %signal_listeners, %input_listeners, %timeouts);
+our (%settings, %windows, @console, $select, %signal_listeners, %input_listeners, %timeouts, @signals);
 
 our @EXPORT = qw( MSGLEVEL_CLIENTCRAP );
 our @EXPORT_OK = qw( %signal_listeners %input_listeners @console);
@@ -26,6 +26,7 @@ $select = IO::Select->new();
 sub print {
 	my ($line, $level) = @_;
 	push(@console, $line);
+	#print("$line\n");
 }
 
 sub settings_add_int {
@@ -55,6 +56,7 @@ sub _handle {
 		}
 	}
 
+	_fire_signals();
 	_fire_timeouts();
 }
 
@@ -72,18 +74,24 @@ sub input_remove {
 
 sub signal_add_last {
 	my ($sig_name, $func) = @_;
-	my $tag = Data::GUID->new();
-	$signal_listeners{$tag} = $func;
-	return $tag;
+	$signal_listeners{$sig_name} = $func;
+	return $sig_name;
 }
 sub signal_remove {
 	my ($tag) = @_;
 	delete($signal_listeners{$tag});
 }
-sub _trigger_signal {
-	my ($sig_name) = @_;
-	my $func = $signal_listeners{$sig_name};
-	&func();
+sub _add_signal {
+	my ($sig_name, $data) = @_;
+	push(@signals, [$sig_name, $data]);
+}
+sub _fire_signals {
+	foreach my $signal (@signals) {
+		my ($sig_name, $data) = @$signal;
+		my $func = $signal_listeners{$sig_name};
+		&$func(@$data);
+	}
+	@signals = ();
 }
 
 sub timeout_add_once {
@@ -99,8 +107,8 @@ sub timeout_remove {
 sub _fire_timeouts {
 	keys(%timeouts);
 	while(my($tag, $func) = each(%timeouts)) {
+		&$func();
 		delete($timeouts{$tag});
-		&$func($data);
 	}
 }
 

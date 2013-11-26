@@ -35,7 +35,7 @@ sub LOAD {
 	$commander = Irssi::JSON::RPC::Commander->new();
 	$marshaller = JSON::RPC::Common::Marshal::HTTP->new();
 
-	Irssi::signal_add_last("print text", \&handle_print_text_event);
+	Irssi::signal_add_last("print text", sub {Irssi::JSON::RPC::EventHandler->handle_print_text_event(@_);});
 	Irssi::JSON::RPC::HTTP->setup_tcp_socket();
 }
 
@@ -192,9 +192,12 @@ sub RELOAD {
 		if (!defined($line) || $line->{info}->{time} <= $timestamp_limit) {
 			if ($timeout) {
 				# Wait for lines, return a deferred response definition object
-				my $deferred = Irssi::JSON::RPC::DeferredResponse->new();
+
+				# TODO: Clean up some
+				my $deferred = Irssi::JSON::RPC::DeferredResponse->new('refnum' => $refnum);
 				my $event_handler = sub {
-					$deferred->handle_event();
+					shift; # Remove class param
+					$deferred->handle_event(@_);
 				};
 				$deferred->{timeout_tag} = Irssi::timeout_add_once($timeout*1000, $event_handler);
 				Irssi::JSON::RPC::EventHandler->add_text_listener($refnum, $event_handler);
@@ -270,17 +273,16 @@ sub RELOAD {
 =cut
 	sub handle_print_text_event {
 		#  "print text", TEXT_DEST_REC *dest, char *text, char *stripped
-		my ($dest) = @_;
+		my ($class, $dest) = @_;
 
 		my $refnum = $dest->{window}->{refnum};
 
 		my $funs = $text_listeners{$refnum};
 		if (defined($funs)) {
-			delete($text_listeners{$refnum});
-
-			for my $fun ($funs) {
-				&fun(@_);
+			for my $fun (@$funs) {
+				&$fun(@_);
 			}
+			delete($text_listeners{$refnum});
 		}
 
 		# XXX: Should follow theme format
@@ -295,12 +297,17 @@ sub RELOAD {
 	}
 
 	sub add_text_listener {
-		my ($clss, $refnum, $deffered) = @_;
+		my ($class, $refnum, $deffered) = @_;
 		unless ($text_listeners{$refnum}) {
 			$text_listeners{$refnum} = [];
 		}
 
 		push($text_listeners{$refnum}, $deffered);
+	}
+
+	sub remove_text_listener {
+		my ($refnum) = @_;
+		delete($text_listeners{$refnum});
 	}
 }
 
@@ -308,21 +315,27 @@ sub RELOAD {
 	package Irssi::JSON::RPC::DeferredResponse;
 
 	sub new {
+		my $class = shift;
+		my %args = @_;
 		return bless {
 			'response_handler' => undef,
-			'timeout_tag' => undef
-			}, shift;
+			'timeout_tag' => undef,
+			'refnum' => $args{refnum}
+			}, $class;
 	}
 
 	sub handle_event {
 		my ($self, $dest, $text, $formatted_text) = @_;
-		my $func = $self->{response_handler};
+		my $data;
 		if ($dest) {
-			&$func($commander->getWindowLines('refnum' -> $dest->{window}->{refnum}));
+			Irssi::timeout_remove($self->{timeout_tag});
+			$data = $commander->getWindowLines('refnum' => $dest->{window}->{refnum}, 'rowLimit' => 1);
 		} else {
-			my @array = ();
-			&$func(\@array);
+			Irssi::JSON::RPC::EventHandler::remove_text_listener($self->{refnum});
+			$data = [];
 		}
+		my $func = $self->{response_handler};
+		&$func($data);
 	}
 }
 
@@ -401,10 +414,11 @@ sub RELOAD {
 			Irssi::JSON::RPC::Misc->logg('Received command: ' . $call->method());
 			my $res = $call->call($commander);
 			if (ref($res->{result}) eq 'Irssi::JSON::RPC::DeferredResponse') {
+				my $client_conn = $connection->{handle};
 				$res->{result}->{response_handler} = sub {
+					# TODO: Clean up some
 					$res->{result} = shift;
 					my $response = $marshaller->result_to_response($res);
-					my $client_conn = $connection->{handle};
 					$client_conn->send_response($response);
 				};
 				return undef;
