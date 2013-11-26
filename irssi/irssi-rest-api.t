@@ -46,17 +46,17 @@ is_response('url' => '/', 'code' => 404, 'test_name' => 'Invalid path');
 is_jrpc('method' => 'getWindows', 'result' => []);
 is_jrpc('method' => 'getWindow', 'params' => {'undefinedParam' => 'hello'}, 'error' => -32603);
 is_jrpc('method' => 'undefinedMethod', 'error' => -32603);
-is_response('url' => '/rpc', 'method' => 'POST', 'code' => 500, 'test_name' => 'Missing JSON');
-is_response('url' => '/rpc', 'method' => 'POST',
+is_response('url' => '/json-rpc', 'method' => 'POST', 'code' => 500, 'test_name' => 'Missing JSON');
+is_response('url' => '/json-rpc', 'method' => 'POST',
 			'body' => '{"jsonrpc": "2.0", "method": "foobar, "params": "bar", "baz]', 'code' => 500,
 			'test_name' => 'Invalid JSON');
-is_response('url' => '/rpc', 'method' => 'POST',
+is_response('url' => '/json-rpc', 'method' => 'POST',
 			'body' => '{"jsonrpc": "2.0", "method": 1, "params": "bar"}', 'code' => 500,
 			'test_name' => 'Invalid request');
-is_response('url' => '/rpc', 'method' => 'POST', 'body' => '[]',
+is_response('url' => '/json-rpc', 'method' => 'POST', 'body' => '[]',
 			'code' => 500, 'test_name' => 'Invalid batch');
 # GET api
-is_response('url' => '/rpc?method=getWindows', 'data' => '{"version":"1.1","result":[]}',
+is_response('url' => '/json-rpc?method=getWindows', 'data' => '{"version":"1.1","result":[]}',
 			'test_name' => 'GET request');
 
 
@@ -144,7 +144,7 @@ sub is_jrpc {
 	if ($params) {
 		$request->{params} = $params;
 	}
-	my $thread = async {$ua->post($base_url . '/rpc', 'Content' => JSON::encode_json($request))};
+	my $thread = async {$ua->post($base_url . '/json-rpc', 'Content' => JSON::encode_json($request))};
 	Irssi->_handle();
 	my $response = $thread->join();
 

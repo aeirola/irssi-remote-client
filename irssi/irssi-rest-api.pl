@@ -350,7 +350,6 @@ sub RELOAD {
 	use HTTP::Daemon;   # HTTP connections
 	use HTTP::Status;   # HTTP Status codes
 	use HTTP::Response; # HTTP Responses
-	use Protocol::WebSocket;                # Websocket connection handling
 	
 	our $server;			# Stores the server information
 	our %connections = ();	# Stores client connections information
@@ -390,8 +389,6 @@ sub RELOAD {
 =pod
 	Handles HTTP request sent by client
 
-	Transforms websocket requests to websocket conections
-
 	Params:
 		http_request: HTTP::Request object
 		connection: Connection definitin hash
@@ -408,7 +405,7 @@ sub RELOAD {
 			return $http_response;
 		}
 
-		if ($http_request->url =~/^\/rpc(\?.*)?$/) {
+		if ($http_request->url =~/^\/json-rpc(\?.*)?$/) {
 			# HTTP RPC calls
 			my $call = $marshaller->request_to_call($http_request);
 			Irssi::JSON::RPC::Misc->logg('Received command: ' . $call->method());
@@ -425,22 +422,6 @@ sub RELOAD {
 			} else {
 				return $marshaller->result_to_response($res);
 			}
-		} elsif ($http_request->method eq 'GET' && $http_request->url =~ /^\/websocket\/?$/) {
-			# Handle websocket initiations
-			Irssi::JSON::RPC::Misc->logg('Starting websocket');
-			my $hs = Protocol::WebSocket::Handshake::Server->new();
-			my $frame = $hs->build_frame();
-
-			my $handle = $connection->{handle};
-			$connection->{handshake} = $hs;
-			$connection->{frame} = $frame;
-
-			$hs->parse($http_request->as_string);
-			print($handle, $hs->to_string);
-			$connection->{isWebsocket} = 1;
-			Irssi::JSON::RPC::Misc->logg('WebSocket started');
-
-			return undef;
 		} else {
 			# NOT found
 			return HTTP::Response->new(RC_NOT_FOUND);
@@ -465,54 +446,6 @@ sub RELOAD {
 			return 1;
 		}
 	}
-
-
-###
-#   WebSocket stuff
-###
-=pod
-	Handles a message sent to a websocket connection
-
-	Params:
-	 - connection: Connection definition hash
-
-=cut
-	sub handle_websocket_message {
-		my ($connection) = @_;
-		my $client_conn = $connection->{handle};
-		my $frame = $connection->{frame};
-
-		my $rs = $client_conn->sysread(my $chunk, 1024);
-		if ($rs) {
-			$frame->append($chunk);
-			while (my $message = $frame->next()) {
-				if ($frame->is_close()) {
-					my $hs = $connection->{handshake};
-					# Send close frame back
-					my $frame = $hs->build_frame(type => 'close', version => 'draft-ietf-hybi-17');
-					print($client_conn, $frame->to_bytes());
-				} else {
-					# Handle message
-					my $call = $marshaller->json_to_call($message);
-					Irssi::JSON::RPC::Misc->logg('received command: ' . $call->method());
-					my $res = $call->call($commander);
-					if (ref($res->{result}) eq 'Irssi::JSON::RPC::DeferredResponse') {
-						$res->{result}->{response_handler} = sub {
-							my $json_response = $marshaller->return_to_json(shift);
-							$client_conn->send_response($json_response);
-						};
-						return undef;
-					} else {
-						my $json_response = $marshaller->return_to_json($res);
-						$client_conn->send_response($json_response);
-					}
-				}
-			}
-		} else {
-			destroy_connection($connection);
-		}
-	}
-
 
 ##
 #   Socket handling
@@ -574,11 +507,7 @@ sub RELOAD {
 		unless ($connection->{handle}->connected()) {
 			return;
 		}
-		if ($connection->{frame}) {
-			handle_websocket_message($connection);
-		} else {
-			handle_http_message($connection);
-		}
+		handle_http_message($connection);
 	}
 
 =pod
