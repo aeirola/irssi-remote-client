@@ -35,7 +35,7 @@ sub LOAD {
 	$commander = Irssi::JSON::RPC::Commander->new();
 	$marshaller = JSON::RPC::Common::Marshal::HTTP->new();
 
-	Irssi::signal_add_last("print text", sub {Irssi::JSON::RPC::EventHandler->handle_print_text_event(@_);});
+	Irssi::signal_add_last("print text", sub {Irssi::JSON::RPC::EventHandler::handle_print_text_event(@_);});
 	Irssi::JSON::RPC::HTTP->setup_tcp_socket();
 }
 
@@ -192,15 +192,24 @@ sub RELOAD {
 		if (!defined($line) || $line->{info}->{time} <= $timestamp_limit) {
 			if ($timeout) {
 				# Wait for lines, return a deferred response definition object
-
-				# TODO: Clean up some
-				my $deferred = Irssi::JSON::RPC::DeferredResponse->new('refnum' => $refnum);
+				my $deferred = Irssi::JSON::RPC::DeferredResponse->new();
 				my $event_handler = sub {
-					shift; # Remove class param
-					$deferred->handle_event(@_);
+					my ($dest, $text, $formatted_text) = @_;
+					my $data;
+					if ($dest) {
+						Irssi::timeout_remove($deferred->{timeout_tag});
+						# TODO: timeouts and shit!
+						$data = $commander->getWindowLines('refnum' => $refnum, 'rowLimit' => 1);
+					} else {
+						# Timed out, no content
+						Irssi::JSON::RPC::EventHandler::remove_text_listener($refnum);
+						$data = [];
+					}
+					my $func = $deferred->{response_handler};
+					&$func($deferred, $data);
 				};
 				$deferred->{timeout_tag} = Irssi::timeout_add_once($timeout*1000, $event_handler);
-				Irssi::JSON::RPC::EventHandler->add_text_listener($refnum, $event_handler);
+				$deferred->{event_tag} = Irssi::JSON::RPC::EventHandler::add_text_listener($refnum, $event_handler);
 				return $deferred;
 			} else {
 				return [];
@@ -273,7 +282,7 @@ sub RELOAD {
 =cut
 	sub handle_print_text_event {
 		#  "print text", TEXT_DEST_REC *dest, char *text, char *stripped
-		my ($class, $dest) = @_;
+		my ($dest) = @_;
 
 		my $refnum = $dest->{window}->{refnum};
 
@@ -284,20 +293,10 @@ sub RELOAD {
 			}
 			delete($text_listeners{$refnum});
 		}
-
-		# XXX: Should follow theme format
-		#my ($sec,$min,$hour) = localtime(time);
-		#my $formatted_text = "$hour:$min $stripped";
-
-		#my $json = {
-		#	'window' => $dest->{window}->{refnum},
-		#	'text' => $formatted_text
-		#};
-		#send_to_clients($json);
 	}
 
 	sub add_text_listener {
-		my ($class, $refnum, $deffered) = @_;
+		my ($refnum, $deffered) = @_;
 		unless ($text_listeners{$refnum}) {
 			$text_listeners{$refnum} = [];
 		}
@@ -307,6 +306,7 @@ sub RELOAD {
 
 	sub remove_text_listener {
 		my ($refnum) = @_;
+		# TODO: Should only delete the one for the current connection
 		delete($text_listeners{$refnum});
 	}
 }
@@ -318,24 +318,11 @@ sub RELOAD {
 		my $class = shift;
 		my %args = @_;
 		return bless {
-			'response_handler' => undef,
-			'timeout_tag' => undef,
-			'refnum' => $args{refnum}
+			'response_handler' => $args{response_handler},
+			'timeout_tag' => $args{timeout_tag},
+			'connection' => $args{connection},
+			'result' => $args{result}
 			}, $class;
-	}
-
-	sub handle_event {
-		my ($self, $dest, $text, $formatted_text) = @_;
-		my $data;
-		if ($dest) {
-			Irssi::timeout_remove($self->{timeout_tag});
-			$data = $commander->getWindowLines('refnum' => $dest->{window}->{refnum}, 'rowLimit' => 1);
-		} else {
-			Irssi::JSON::RPC::EventHandler::remove_text_listener($self->{refnum});
-			$data = [];
-		}
-		my $func = $self->{response_handler};
-		&$func($data);
 	}
 }
 
@@ -376,12 +363,12 @@ sub RELOAD {
 			if ($response) {
 				$client_conn->send_response($response);
 				if ($response->header('connection') || '' eq 'close') {
-					Irssi::JSON::RPC::Misc->logg('Closing connection: ' . $response->status_line());
+					Irssi::JSON::RPC::Misc::logg('Closing connection: ' . $response->status_line());
 					destroy_connection($connection);
 				}
 			}
 		} else {
-			Irssi::JSON::RPC::Misc->logg('Closing connection: ' . $client_conn->reason());
+			Irssi::JSON::RPC::Misc::logg('Closing connection: ' . $client_conn->reason());
 			destroy_connection($connection);
 		}
 	}
@@ -401,30 +388,41 @@ sub RELOAD {
 
 		unless (is_authenticated($http_request)) {
 			$http_response = HTTP::Response->new(RC_UNAUTHORIZED);
-			Irssi::JSON::RPC::Misc->logg('Unauthorized request', 'WARNING');
+			Irssi::JSON::RPC::Misc::logg('Unauthorized request', 'WARNING');
 			return $http_response;
 		}
 
 		if ($http_request->url =~/^\/json-rpc(\?.*)?$/) {
 			# HTTP RPC calls
 			my $call = $marshaller->request_to_call($http_request);
-			Irssi::JSON::RPC::Misc->logg('Received command: ' . $call->method());
-			my $res = $call->call($commander);
-			if (ref($res->{result}) eq 'Irssi::JSON::RPC::DeferredResponse') {
-				my $client_conn = $connection->{handle};
-				$res->{result}->{response_handler} = sub {
-					# TODO: Clean up some
-					$res->{result} = shift;
-					my $response = $marshaller->result_to_response($res);
-					$client_conn->send_response($response);
-				};
+			Irssi::JSON::RPC::Misc::logg('Received command: ' . $call->method());
+			my $result = $call->call($commander);
+			if (ref($result->{result}) eq 'Irssi::JSON::RPC::DeferredResponse') {
+				my $deferred = $result->{result};
+				$deferred->{result} = $result;
+				$deferred->{connection} = $connection;
+				$deferred->{response_handler} = \&deferred_http_response_handler;
 				return undef;
 			} else {
-				return $marshaller->result_to_response($res);
+				return $marshaller->result_to_response($result);
 			}
 		} else {
 			# NOT found
 			return HTTP::Response->new(RC_NOT_FOUND);
+		}
+	}
+
+	sub deferred_http_response_handler {
+		my ($deferred, $return_value) = @_;
+		my $result = $deferred->{result};
+		my $connection = $deferred->{connection};
+
+		$result->{result} = $return_value;
+		my $http_response = $marshaller->result_to_response($result);
+
+		my $client_conn = $connection->{handle};
+		if ($client_conn) {
+			$client_conn->send_response($http_response);
 		}
 	}
 
@@ -461,7 +459,7 @@ sub RELOAD {
 												Listen    => 1 )
 			or die "Couldn't be a tcp server on port $server_port : $@\n";
 		$server->{handle} = $handle;
-		Irssi::JSON::RPC::Misc->logg("HTTP server started on port " . $server_port, 1);
+		Irssi::JSON::RPC::Misc::logg("HTTP server started on port " . $server_port, 1);
 
 		# Add handler for server connections
 		my $tag = Irssi::input_add(fileno($handle),
@@ -481,7 +479,7 @@ sub RELOAD {
 	sub handle_connection {
 		my ($server) = @_;
 		my $handle = $server->{handle}->accept();
-		Irssi::JSON::RPC::Misc->logg("Client connected from " . $handle->peerhost());
+		Irssi::JSON::RPC::Misc::logg("Client connected from " . $handle->peerhost());
 
 		my $connection = {
 			"handle" => $handle,
@@ -568,7 +566,7 @@ sub RELOAD {
 	Log line to irssi console
 =cut
 	sub logg {
-		my ($class, $message, $level) = @_;
+		my ($message, $level) = @_;
 		Irssi::print("%B>>%n $IRSSI{name}: $message", MSGLEVEL_CLIENTCRAP);
 	}
 }
