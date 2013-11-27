@@ -46,20 +46,6 @@ sub settings_get_str {
 	return $settings{$key};
 }
 
-sub _handle {
-	while(@ready = $select->can_read(0.1)) {
-		foreach $fh (@ready) {
-			my $listener = $input_listeners{$fh};
-			my $func = $listener->{'func'};
-			my $data = $listener->{'data'};
-			&$func($data);
-		}
-	}
-
-	_fire_hooks();
-	_fire_timeouts();
-}
-
 sub input_add {
 	my ($source, $condition, $func, $data) = @_;
 	$select->add($source);
@@ -86,16 +72,6 @@ sub signal_emit {
 	my $func = $signal_listeners{$sig_name};
 	&$func(@params);
 }
-sub _add_hook {
-	my ($func) = @_;
-	push(@hooks, $func);
-}
-sub _fire_hooks {
-	foreach my $func (@hooks) {
-		&$func();
-	}
-	@hooks = ();
-}
 
 sub timeout_add_once {
 	my ($msecs, $func, $data) = @_;
@@ -107,13 +83,6 @@ sub timeout_remove {
 	my ($tag) = @_;
 	delete($timeouts{$tag});
 }
-sub _fire_timeouts {
-	keys(%timeouts);
-	while(my($tag, $func) = each(%timeouts)) {
-		&$func();
-		delete($timeouts{$tag});
-	}
-}
 
 sub windows {
 	return values(%windows);
@@ -122,14 +91,49 @@ sub window_find_refnum {
 	my ($refnum) = @_;
 	return $windows{$refnum};
 }
-sub _set_window {
-	my $window = Irssi::UI::Window->new(@_);
-	$windows{$window->{refnum}} = $window;
-}
-
 
 sub INPUT_READ {
 	1;
 };
+
+package Irssi::Test;
+
+sub handle {
+	while(@ready = $select->can_read(0.1)) {
+		foreach $fh (@ready) {
+			my $listener = $input_listeners{$fh};
+			my $func = $listener->{'func'};
+			my $data = $listener->{'data'};
+			&$func($data);
+		}
+	}
+
+	fire_hooks();
+	fire_timeouts();
+}
+
+sub add_hook {
+	my ($func) = @_;
+	push(@hooks, $func);
+}
+sub fire_hooks {
+	foreach my $func (@hooks) {
+		&$func();
+	}
+	@hooks = ();
+}
+
+sub fire_timeouts {
+	keys(%timeouts);
+	while(my($tag, $func) = each(%timeouts)) {
+		&$func();
+		delete($timeouts{$tag});
+	}
+}
+sub set_window {
+	my $window = Irssi::UI::Window->new(@_);
+	$windows{$window->{refnum}} = $window;
+}
+
 
 1;

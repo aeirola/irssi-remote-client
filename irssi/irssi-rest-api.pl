@@ -185,14 +185,14 @@ sub RELOAD {
 														   'rowLimit' => $row_limit);
 					} else {
 						# Timed out, no content
-						Irssi::JSON::RPC::EventHandler::remove_text_listener($refnum);
+						Irssi::JSON::RPC::EventHandler::remove_text_listener($deferred->{event_tag});
 						$data = [];
 					}
 					my $func = $deferred->{response_handler};
 					&$func($deferred, $data);
 				};
 				$deferred->{timeout_tag} = &$outside_call(\&Irssi::timeout_add_once, 
-														$timeout*1000, $event_handler, undef);
+														  $timeout*1000, $event_handler, undef);
 				$deferred->{event_tag} = Irssi::JSON::RPC::EventHandler::add_text_listener($refnum, $event_handler);
 				return $deferred;
 			} else {
@@ -270,9 +270,10 @@ sub RELOAD {
 
 		my $refnum = $dest->{window}->{refnum};
 
-		my $funs = $text_listeners{$refnum};
-		if (defined($funs)) {
-			for my $fun (@$funs) {
+		if (defined($text_listeners{$refnum})) {
+			my %window_listeners = %{$text_listeners{$refnum}};
+			keys(%window_listeners);
+			for my $fun (values(%window_listeners)) {
 				&$fun(@_);
 			}
 			delete($text_listeners{$refnum});
@@ -280,18 +281,21 @@ sub RELOAD {
 	}
 
 	sub add_text_listener {
-		my ($refnum, $deffered) = @_;
-		unless ($text_listeners{$refnum}) {
-			$text_listeners{$refnum} = [];
+		my ($refnum, $func) = @_;
+		my $window_listeners = $text_listeners{$refnum};
+		unless ($window_listeners) {
+			$window_listeners = {};
+			$text_listeners{$refnum} = $window_listeners;
 		}
-
-		push(@{$text_listeners{$refnum}}, $deffered);
+		$window_listeners->{$refnum} = $func;
+		return [$refnum, $refnum];
 	}
 
 	sub remove_text_listener {
-		my ($refnum) = @_;
-		# TODO: Should only delete the one for the current connection
-		delete($text_listeners{$refnum});
+		my ($tag) = @_;
+		my ($refnum, $funcnum) = @$tag;
+		my %window_listeners = %{$text_listeners{$refnum}};
+		delete($window_listeners{$funcnum});
 	}
 }
 
