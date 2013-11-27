@@ -3,7 +3,6 @@
 use strict;
 
 use Irssi;          # Interfacing with irssi
-use JSON::RPC::Common::Marshal::HTTP;   # JSON-RPC handling
 
 our $VERSION = '0.01';
 our %IRSSI = (
@@ -16,8 +15,17 @@ our %IRSSI = (
 	license     => 'Public Domain',
 );
 
-our $commander;			# Stores the object which contains the json-rpc commands
-our $marshaller;		# Stores the json-rpc marshaller
+our %log_levels = (
+	ERROR => 4,
+	WARNING => 3,
+	INFO => 2,
+	DEBUG => 1,
+);
+our %settings = (
+	'port' => undef,
+	'password_hash' => undef,
+	'log_level' => undef
+);
 
 # Irssi uses some shifty logic to determine the package of the function calling timeouts and such
 # This we must use this function reference to make the calls outside of the namespaces
@@ -35,35 +43,52 @@ our $outside_call = sub {
 Called at start of script
 =cut
 sub LOAD {
-	Irssi::settings_add_int('rest', 'rest_port', 10000);
-	Irssi::settings_add_str('rest', 'rest_password', 'd0ntLe@veM3');
-	Irssi::settings_add_str('rest', 'rest_log_level', 'INFO');
-
-	$commander = Irssi::JSON::RPC::Commander->new();
-	$marshaller = JSON::RPC::Common::Marshal::HTTP->new();
-
-	Irssi::signal_add_last("print text", \&Irssi::JSON::RPC::EventHandler::handle_print_text_event);
-	Irssi::JSON::RPC::HTTP::setup_tcp_socket();
+	Irssi::JSON::RPC::Settings::setup();
+	Irssi::JSON::RPC::EventHandler::setup();
+	Irssi::JSON::RPC::HTTP::setup();
 }
 
 =pod
 Called by Irssi at script unload time
 =cut
 sub UNLOAD {
-	Irssi::JSON::RPC::HTTP::destroy_sockets();
+	Irssi::JSON::RPC::HTTP::teardown();
 }
 
-=pod
-Called when settings change
+{
+	package Irssi::JSON::RPC::Settings;
 
-# TODO: Add signal listener for settings change
-=cut
-sub RELOAD {
-	Irssi::JSON::RPC::HTTP::destroy_sockets();
-	Irssi::JSON::RPC::HTTP::setup_tcp_socket();
+	use Digest::SHA qw(sha512_base64);	# Password hashing
+
+	sub setup {
+		&$outside_call(\&Irssi::settings_add_int, 'rest', 'rest_port', 10000);
+		&$outside_call(\&Irssi::settings_add_str, 'rest', 'rest_password', 'd0ntLe@veM3');
+		&$outside_call(\&Irssi::settings_add_int, 'rest', 'rest_log_level', 2);
+
+		reload_settings();
+		&$outside_call(\&Irssi::signal_add_last, 'setup changed', \&reload_settings);
+	}
+
+	sub reload_settings {
+		$settings{password_hash} = sha512_base64(&$outside_call(\&Irssi::settings_get_str, 'rest_password'));
+		$settings{log_level} = &$outside_call(\&Irssi::settings_get_int, 'rest_log_level');
+
+		my $new_port = &$outside_call(\&Irssi::settings_get_int, 'rest_port');
+		my $old_port = $settings{port} || 0;
+		if ($new_port != $old_port) {
+			$settings{port} = $new_port;
+			if ($old_port) {
+				reload_service();
+			}
+		}
+	}
+
+	sub reload_service {
+		Irssi::JSON::RPC::Misc::logg('Settings changed, restarting daemon', $log_levels{INFO});
+		Irssi::JSON::RPC::HTTP::teardown();
+		Irssi::JSON::RPC::HTTP::setup();
+	}
 }
-
-
 
 {
 =pod
@@ -180,9 +205,9 @@ sub RELOAD {
 					my $data;
 					if ($dest) {
 						Irssi::timeout_remove($deferred->{timeout_tag});
-						$data = $commander->getWindowLines('refnum' => $refnum,
-														   'timestampLimit' => $timestamp_limit,
-														   'rowLimit' => $row_limit);
+						$data = $self->getWindowLines('refnum' => $refnum,
+													  'timestampLimit' => $timestamp_limit,
+													  'rowLimit' => $row_limit);
 					} else {
 						# Timed out, no content
 						Irssi::JSON::RPC::EventHandler::remove_text_listener($deferred->{event_tag});
@@ -261,6 +286,10 @@ sub RELOAD {
 
 	our %text_listeners = ();# Stores deferred text events
 
+	sub setup {
+		&$outside_call(\&Irssi::signal_add_last, 'print text', \&handle_print_text_event);
+	}
+
 =pod
 	Handles writing of message events to deferred responses
 =cut
@@ -336,9 +365,12 @@ sub RELOAD {
 	use HTTP::Daemon;   # HTTP connections
 	use HTTP::Status;   # HTTP Status codes
 	use HTTP::Response; # HTTP Responses
+	use JSON::RPC::Common::Marshal::HTTP;   # JSON-RPC handling
 
 	our $server;			# Stores the server information
 	our %connections = ();	# Stores client connections information
+	our $commander;			# Stores the object which contains the json-rpc commands
+	our $marshaller;		# Stores the json-rpc marshaller
 
 
 =pod
@@ -362,12 +394,12 @@ sub RELOAD {
 			if ($response) {
 				$client_conn->send_response($response);
 				if ($response->header('connection') || '' eq 'close') {
-					Irssi::JSON::RPC::Misc::logg('Closing connection: ' . $response->status_line());
+					Irssi::JSON::RPC::Misc::logg('Closing connection: ' . $response->status_line(), $log_levels{INFO});
 					destroy_connection($connection);
 				}
 			}
 		} else {
-			Irssi::JSON::RPC::Misc::logg('Closing connection: ' . $client_conn->reason());
+			Irssi::JSON::RPC::Misc::logg('Closing connection: ' . $client_conn->reason(), $log_levels{INFO});
 			destroy_connection($connection);
 		}
 	}
@@ -387,14 +419,14 @@ sub RELOAD {
 
 		unless (is_authenticated($http_request)) {
 			$http_response = HTTP::Response->new(RC_UNAUTHORIZED);
-			Irssi::JSON::RPC::Misc::logg('Unauthorized request', 'WARNING');
+			Irssi::JSON::RPC::Misc::logg('Unauthorized request', $log_levels{WARNING});
 			return $http_response;
 		}
 
 		if ($http_request->url =~/^\/json-rpc(\?.*)?$/) {
 			# HTTP RPC calls
 			my $call = $marshaller->request_to_call($http_request);
-			Irssi::JSON::RPC::Misc::logg('Received command: ' . $call->method());
+			Irssi::JSON::RPC::Misc::logg('Received command: ' . $call->method(), $log_levels{DEBUG});
 			my $result = $call->call($commander);
 			if (ref($result->{result}) eq 'Irssi::JSON::RPC::DeferredResponse') {
 				my $deferred = $result->{result};
@@ -435,12 +467,12 @@ sub RELOAD {
 =cut
 	sub is_authenticated {
 		my ($request) = @_;
-		my $password = Irssi::settings_get_str('rest_password');
-		if ($password) {
-			my $request_header = $request->header('Secret');
-			return defined($request_header) && $request_header eq $password;
+		my $hash = $settings{password_hash};
+		if ($hash) {
+			my $request_header = $request->header('Irssi-Authorization');
+			return defined($request_header) && $request_header eq $hash;
 		} else {
-			return 1;
+			return 0;
 		}
 	}
 
@@ -451,15 +483,21 @@ sub RELOAD {
 =pod
 	Setups listening of TCP connections on port using Irssi::input_add
 =cut
-	sub setup_tcp_socket {
-		my $server_port = Irssi::settings_get_int('rest_port');
+	sub setup {
+		$commander = Irssi::JSON::RPC::Commander->new();
+		$marshaller = JSON::RPC::Common::Marshal::HTTP->new();
+
+		my $server_port = $settings{port};
 		my $handle = HTTP::Daemon->new(LocalPort => $server_port,
-												Type      => SOCK_STREAM,
-												Reuse     => 1,
-												Listen    => 1 )
-			or die "Couldn't be a tcp server on port $server_port : $@\n";
+										Type      => SOCK_STREAM,
+										Reuse     => 1,
+										Listen    => 1 );
+		unless($handle) {
+			Irssi::JSON::RPC::Misc::logg("Port $server_port already in use, please change port", $log_levels{ERROR});
+			return;
+		}
 		$server->{handle} = $handle;
-		Irssi::JSON::RPC::Misc::logg("HTTP server started on port " . $server_port, 1);
+		Irssi::JSON::RPC::Misc::logg("HTTP server started on port $server_port", $log_levels{INFO});
 
 		# Add handler for server connections
 		my $tag = &$outside_call(\&Irssi::input_add, fileno($handle), Irssi::INPUT_READ, 
@@ -478,7 +516,7 @@ sub RELOAD {
 	sub handle_connection {
 		my ($server) = @_;
 		my $handle = $server->{handle}->accept();
-		Irssi::JSON::RPC::Misc::logg("Client connected from " . $handle->peerhost());
+		Irssi::JSON::RPC::Misc::logg("Client connected from " . $handle->peerhost(), $log_levels{INFO});
 
 		my $connection = {
 			"handle" => $handle,
@@ -546,7 +584,7 @@ sub RELOAD {
 =pod
 	Destroys all active connections and the server listener
 =cut
-	sub destroy_sockets {
+	sub teardown {
 		destroy_connections();
 		destroy_socket($server);
 	}
@@ -565,7 +603,9 @@ sub RELOAD {
 =cut
 	sub logg {
 		my ($message, $level) = @_;
-		Irssi::print("%B>>%n $IRSSI{name}: $message", MSGLEVEL_CLIENTCRAP);
+		if ($level >= $settings{log_level}) {
+			Irssi::print("%B>>%n $IRSSI{name}: $message", MSGLEVEL_CLIENTCRAP);
+		}
 	}
 }
 

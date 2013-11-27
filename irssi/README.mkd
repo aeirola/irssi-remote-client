@@ -1,7 +1,5 @@
 TODO:
 -----
- - Make work in irssi
- - Salted password hashing
  - Fix test threading so that connection keep-alive will be used
  - OOO Modular structure: commands, tcp handling, http handling, websocket handling, rpc handling
  - Correct JSON-RPC response codes
@@ -12,7 +10,7 @@ Requirements:
  * HTTP::Status
  * HTTP::Response
  * JSON::RPC::Common::Marshal::HTTP
- * Protocol::WebSocket
+ * Digest::SHA
 
 
 

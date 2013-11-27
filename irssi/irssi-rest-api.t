@@ -3,10 +3,12 @@ use warnings;
 use strict;
 
 use threads;
+use Test::More;
+
 use Data::Dumper; # dbug prints
 use LWP::UserAgent;
 use JSON;
-use Test::More;
+use Digest::SHA qw(sha512_base64);
 
 # Mock some stuff
 BEGIN { push(@INC, './mock');}
@@ -16,8 +18,12 @@ use Irssi qw( %input_listeners %signal_listeners @console);
 our ($VERSION, %IRSSI);
 require_ok('irssi-rest-api.pl');
 
-my $port = Irssi::settings_get_int('rest_port');
-my $password = Irssi::settings_get_str('rest_password');
+my $port = 47895;
+my $password = 'test_password';
+Irssi::settings_set_int('rest_port', $port);
+Irssi::settings_set_str('rest_password', $password);
+Irssi::settings_set_int('rest_log_level', 0);
+
 
 # Test static fields
 like($VERSION, qr/^\d+\.\d+$/, 'Version format is correct');
@@ -30,7 +36,7 @@ isnt(Irssi::settings_get_int('rest_port'), undef, 'Port setting added');
 
 # Check existence of listeners
 is(scalar(keys(%input_listeners)), 1, 'Socket input listener set up');
-is(scalar(keys(%signal_listeners)), 1, 'Print signal listener set up');
+is(scalar(keys(%signal_listeners)), 2, 'Print and settings signal listener set up');
 
 
 # Check HTTP interface
@@ -38,9 +44,12 @@ my $ua = LWP::UserAgent->new('keep_alive' => 1);
 my $base_url = "http://localhost:$port";
 is_response('url' => '/', 'code' => 401, 'test_name' => 'Unauthorized request');
 
-$ua->default_header('Secret' => $password);
+$ua->default_header('Irssi-Authorization' => sha512_base64($password));
 is_response('url' => '/', 'code' => 404, 'test_name' => 'Invalid path');
 
+Irssi::settings_set_str('rest_password', 'invalid_password');
+is_response('url' => '/', 'code' => 401, 'test_name' => 'Unauthorized request');
+Irssi::settings_set_str('rest_password', $password);
 
 # Check JSON RPC interface
 is_jrpc('method' => 'getWindows', 'result' => []);

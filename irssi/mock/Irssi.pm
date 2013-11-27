@@ -33,18 +33,18 @@ sub settings_add_int {
 	my ($namespace, $key, $value) = @_;
 	$settings{$key} = $value;
 }
-sub settings_add_str {
-	my ($namespace, $key, $value) = @_;
+sub settings_add_str {settings_add_int(@_);}
+sub settings_set_int {
+	my ($key, $value) = @_;
 	$settings{$key} = $value;
+	signal_emit('setup changed');
 }
+sub settings_set_str {settings_set_int(@_);}
 sub settings_get_int {
 	my ($key) = @_;
 	return $settings{$key};
 }
-sub settings_get_str {
-	my ($key) = @_;
-	return $settings{$key};
-}
+sub settings_get_str {settings_get_int(@_);}
 
 sub input_add {
 	my ($source, $condition, $func, $data) = @_;
@@ -54,8 +54,10 @@ sub input_add {
 }
 sub input_remove {
 	my ($tag) = @_;
-	$select->remove($tag);
-	delete($input_listeners{$tag});
+	if($tag) {
+		$select->remove($tag);
+		delete($input_listeners{$tag});
+	}
 }
 
 sub signal_add_last {
@@ -70,7 +72,9 @@ sub signal_remove {
 sub signal_emit {
 	my ($sig_name, @params) = @_;
 	my $func = $signal_listeners{$sig_name};
-	&$func(@params);
+	if ($func) {
+		&$func(@params);
+	}
 }
 
 sub timeout_add_once {
