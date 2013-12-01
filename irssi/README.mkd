@@ -9,10 +9,28 @@ Requirements:
  * HTTP::Daemon
  * HTTP::Status
  * HTTP::Response
- * JSON::RPC::Common::Marshal::HTTP
+ * JSON::RPC::Common
  * Digest::SHA
 
 
+
+Installing
+----------
+
+If you have root:
+ * Just install the packages `cpan Try::Tiny JSON::RPC::Common`
+
+If you dont have root:
+ * Install stuff with cpanp: `cpanp i Try::Tiny JSON::RPC::Common`
+
+ If you don't have cpanp:
+	 * Install cpanminus: `curl -L http://cpanmin.us | perl - App::cpanminus`
+	 * Install locallib: `$HOME/perl5/bin/cpanm -n --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)`
+	 * Install dependencies: `$HOME/perl5/bin/cpanm -n Moose JSON::RPC::Common Data::GUID`
+	 * Add bash env `echo 'eval $(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)' >> ~/.bash_profile`
+
+
+	 Set lib path in irssi `/script exec use lib "$ENV{'HOME'}/perl5/lib/perl5"`
 
 
 Testing:

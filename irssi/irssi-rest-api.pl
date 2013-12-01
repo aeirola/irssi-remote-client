@@ -390,6 +390,7 @@ sub handle_http_message {
 		try {
 			$response = handle_http_request($request, $connection);
 		} catch {
+			Irssi::JSON::RPC::Misc::logg("Error handling request: $_", $log_levels{WARNING});
 			$response = HTTP::Response->new(RC_INTERNAL_SERVER_ERROR);
 		};
 		if ($response) {

@@ -11,7 +11,7 @@ use JSON;
 use Digest::SHA qw(sha512_base64);
 
 # Mock some stuff
-BEGIN { push(@INC, './mock');}
+use lib './mock';
 use Irssi qw( %input_listeners %signal_listeners @console);
 
 # Load script

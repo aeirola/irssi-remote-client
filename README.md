@@ -1,3 +1,4 @@
+irssi remote client (IRC)
 irssi-rest-api
 ==============
 
