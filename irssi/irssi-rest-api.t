@@ -42,14 +42,28 @@ is(scalar(keys(%signal_listeners)), 2, 'Print and settings signal listener set u
 # Check HTTP interface
 my $ua = LWP::UserAgent->new('keep_alive' => 1);
 my $base_url = "http://localhost:$port";
-is_response('url' => '/', 'code' => 401, 'test_name' => 'Unauthorized request');
+is_response('code' => 401, 'test_name' => 'Unauthorized request');
 
 $ua->default_header('Irssi-Authorization' => sha512_base64($password));
-is_response('url' => '/', 'code' => 404, 'test_name' => 'Invalid path');
+is_response('code' => 404, 'test_name' => 'Invalid path');
 
 Irssi::settings_set_str('rest_password', 'invalid_password');
-is_response('url' => '/', 'code' => 401, 'test_name' => 'Unauthorized request');
+is_response('code' => 401, 'test_name' => 'Unauthorized request');
 Irssi::settings_set_str('rest_password', $password);
+
+# Test CORS settings
+is_response('method' => 'OPTIONS', 'test_name' => 'CORS disabled', expected_headers => {
+	'Access-Control-Allow-Origin' => undef,
+	'Access-Control-Allow-Methods' => undef,
+	'Access-Control-Allow-Headers' => undef,
+	'Access-Control-Max-Age' => undef});
+Irssi::settings_set_bool('rest_allow_cors', 1);
+is_response('method' => 'OPTIONS', 'test_name' => 'CORS enabled', expected_headers => {
+	'Access-Control-Allow-Origin' => '*',
+	'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
+	'Access-Control-Allow-Headers' => 'Irssi-Authorization, Content-Type',
+	'Access-Control-Max-Age' => '1728000'});
+Irssi::settings_set_bool('rest_allow_cors', 0);
 
 # Check JSON RPC interface
 is_jrpc('method' => 'getWindows', 'result' => []);
@@ -171,24 +185,30 @@ sub is_jrpc {
 sub is_response {
 	my %args = @_;
 	my $method = $args{method} || 'GET';
-	my $url = $args{url};
+	my $url = $args{url} || '/';
 	my $body = $args{body};
 	my $expected_code = $args{code} || '200';
+	my $expected_headers = $args{expected_headers} || {};
 	my $expected_data = $args{data} || '';
 	my $test_name = $args{test_name} || "$method $url";
 
 	my $thread;
-	if ($method eq 'GET') {
-		$thread = async {$ua->get($base_url . $url)};
-	} elsif ($method eq 'POST') {
-		$thread = async {$ua->post($base_url . $url, 'Content' => $body)};
-	}
+	$thread = async {
+		my $h = HTTP::Headers->new();
+		my $request = HTTP::Request->new($method, $base_url . $url, $h, $body);
+		$ua->request($request);
+	};
 
 	Irssi::Test::handle();
 	my $response = $thread->join();
 	is($response->code, $expected_code, $test_name. ' (code)');
 	my $data = $response->content;
 	is($data, $expected_data, $test_name. ' (data)');
+
+	keys %$expected_headers;
+	while(my($k, $v) = each %$expected_headers) {
+		is($response->header($k), $v, $test_name. " (header $k)");
+	}
 }
 
 sub is_commands {

@@ -34,17 +34,20 @@ sub settings_add_int {
 	$settings{$key} = $value;
 }
 sub settings_add_str {settings_add_int(@_);}
+sub settings_add_bool {settings_add_int(@_);}
 sub settings_set_int {
 	my ($key, $value) = @_;
 	$settings{$key} = $value;
 	signal_emit('setup changed');
 }
 sub settings_set_str {settings_set_int(@_);}
+sub settings_set_bool {settings_set_int(@_);}
 sub settings_get_int {
 	my ($key) = @_;
 	return $settings{$key};
 }
 sub settings_get_str {settings_get_int(@_);}
+sub settings_get_bool {settings_get_int(@_);}
 
 sub input_add {
 	my ($source, $condition, $func, $data) = @_;

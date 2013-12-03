@@ -67,6 +67,7 @@ sub setup {
 	&$outside_call(\&Irssi::settings_add_int, 'rest', 'rest_port', 10000);
 	&$outside_call(\&Irssi::settings_add_str, 'rest', 'rest_password', 'd0ntLe@veM3');
 	&$outside_call(\&Irssi::settings_add_int, 'rest', 'rest_log_level', 2);
+	&$outside_call(\&Irssi::settings_add_bool, 'rest', 'rest_allow_cors', 0);
 
 	reload_settings();
 	&$outside_call(\&Irssi::signal_add_last, 'setup changed', \&reload_settings);
@@ -75,6 +76,7 @@ sub setup {
 sub reload_settings {
 	$settings{password_hash} = sha512_base64(&$outside_call(\&Irssi::settings_get_str, 'rest_password'));
 	$settings{log_level} = &$outside_call(\&Irssi::settings_get_int, 'rest_log_level');
+	$settings{allow_cors} = &$outside_call(\&Irssi::settings_get_bool, 'rest_allow_cors');
 
 	my $new_port = &$outside_call(\&Irssi::settings_get_int, 'rest_port');
 	my $old_port = $settings{port} || 0;
@@ -387,13 +389,30 @@ sub handle_http_message {
 
 	if ($request) {
 		my $response;
-		try {
-			$response = handle_http_request($request, $connection);
-		} catch {
-			Irssi::JSON::RPC::Misc::logg("Error handling request: $_", $log_levels{WARNING});
-			$response = HTTP::Response->new(RC_INTERNAL_SERVER_ERROR);
-		};
+
+		if ($request->method() eq 'OPTIONS') {
+			$response = HTTP::Response->new(RC_OK);
+			$response->header('Allow', 'GET, POST, OPTIONS');
+			if ($settings{allow_cors}) {
+				$response->header('Access-Control-Allow-Origin' => '*');
+				$response->header('Access-Control-Allow-Methods' => 'GET, POST, OPTIONS');
+				$response->header('Access-Control-Allow-Headers' => 'Irssi-Authorization, Content-Type');
+				$response->header('Access-Control-Max-Age' => '1728000');
+			}
+		} else {
+			try {
+				$response = handle_http_request($request, $connection);
+			} catch {
+				Irssi::JSON::RPC::Misc::logg("Error handling request: $_", $log_levels{WARNING});
+				$response = HTTP::Response->new(RC_INTERNAL_SERVER_ERROR);
+			};
+		}
+
 		if ($response) {
+			if ($settings{allow_cors}) {
+				$response->header('Access-Control-Allow-Origin' => '*');
+			}
+
 			$client_conn->send_response($response);
 			if ($response->header('connection') || '' eq 'close') {
 				Irssi::JSON::RPC::Misc::logg('Closing connection: ' . $response->status_line(), $log_levels{INFO});

@@ -28,9 +28,7 @@ If you dont have root:
 	 * Install locallib: `$HOME/perl5/bin/cpanm -n --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)`
 	 * Install dependencies: `$HOME/perl5/bin/cpanm -n Moose JSON::RPC::Common Data::GUID`
 	 * Add bash env `echo 'eval $(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)' >> ~/.bash_profile`
-
-
-	 Set lib path in irssi `/script exec use lib "$ENV{'HOME'}/perl5/lib/perl5"`
+	 * Set lib path for running irssi instance `/script exec push(@INC, "$ENV{'HOME'}/perl5/lib/perl5")`
 
 
 Testing:
