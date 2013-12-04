@@ -3,6 +3,9 @@ TODO:
  - Fix test threading so that connection keep-alive will be used
  - OOO Modular structure: commands, tcp handling, http handling, websocket handling, rpc handling
  - Correct JSON-RPC response codes
+ - Less dependencies (replace JSON::RPC::Common)
+ - GZIP compression (IO::Compress::Gzip)
+ - SSL support (HTTP::Daemon::SSL)
 
 Requirements:
  * Try::Tiny

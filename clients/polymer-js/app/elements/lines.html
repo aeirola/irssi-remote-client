@@ -1,0 +1,42 @@
+<polymer-element name="lines-element">
+  <template>
+    <style>
+      :host {
+        display: block;
+        overflow-x: scroll;
+      }
+      p {
+        font-family: monospace;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+
+    <template repeat="{{line in lines}}">
+      <p>{{line.text}}</p>
+    </template>
+
+    <json-rpc-element auto url="https://aie.kapsi.fi/irc/json-rpc"
+        method="getWindowLines"
+        params='{"refnum": {{refnum}}, "rowLimit": {{rowLimit}}}'
+        response="{{lines}}"
+        headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'
+        on-polymer-response="{{linesLoaded}}">
+    </json-rpc-element>
+    <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('lines-element', {
+      refnum: 1,
+      rowLimit: 100,
+      windowChangedSignal: function windowClicked(_, detail) {
+        this.refnum = detail;
+      },
+      linesLoaded: function linesLoaded() {
+        this.async(function() {
+          this.scrollTop = this.scrollHeight;
+        });
+      }
+    });
+    </script>
+</polymer-element>

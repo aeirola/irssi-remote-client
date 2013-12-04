@@ -1,0 +1,33 @@
+<polymer-element name="windows-element">
+  <template>
+    <style>
+      :host { 
+        display: block;
+        padding-right: 1em;
+        border-right: 1px solid gray;
+      }
+    </style>
+
+    <ul>
+      <template repeat="{{window in windows}}">
+        <li>
+          <a on-click="{{windowClicked}}" data-refnum="{{window.refnum}}">{{window.refnum}} {{window.type}} {{window.name}}</a>
+        </li>
+      </template>
+    </ul>
+
+    <json-rpc-element auto url="https://aie.kapsi.fi/irc/json-rpc"
+        method="getWindows"
+        response="{{windows}}"
+        headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'>
+    </json-rpc-element>
+  </template>
+  <script>
+    Polymer('windows-element', {
+      windowClicked: function windowClicked(_, _, target) {
+        var refnum = parseInt(target.attributes['data-refnum'].value);
+        this.fire('polymer-signal', {name: 'window-changed', data: refnum});
+      }
+    });
+  </script>
+</polymer-element>

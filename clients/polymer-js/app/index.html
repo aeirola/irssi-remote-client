@@ -1,0 +1,45 @@
+<!doctype html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Irssi remote client</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width">
+        <!-- Place favicon.ico and apple-touch-icon.png in the root directory -->
+        <link rel="stylesheet" href="styles/main.css">
+
+        <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css">
+
+        <!-- build:js scripts/vendor.js -->
+        <script src="bower_components/platform/platform.js"></script>
+        <script src="bower_components/polymer/polymer.js"></script>
+        <!-- endbuild -->
+        <!-- build:js scripts/vendor/modernizr.js -->
+        <!--<script src="bower_components/modernizr/modernizr.js"></script>-->
+        <!-- endbuild -->
+
+        <!-- Place your HTML imports here -->
+        <link rel="import" href="bower_components/polymer-elements/polymer-signals/polymer-signals.html">
+        <link rel="import" href="bower_components/polymer-elements/polymer-ajax/polymer-xhr.html">
+
+        <link rel="import" href="elements/windows.html">
+        <link rel="import" href="elements/lines.html">
+        <link rel="import" href="elements/json-rpc.html">
+        <link rel="import" href="elements/topic.html">
+        <link rel="import" href="elements/input.html">
+    </head>
+    <body class="container-fluid" style="height: 100%">
+        <div class="col-sm-2" style="height: 100%">
+            <windows-element></windows-element>
+        </div>
+        <div class="col-sm-10" style="height: 100%">
+            <topic-element></topic-element>
+            <lines-element style="height: 500px"></lines-element>
+            <input-element></input-element>
+        </div>
+    </body>
+</html>
