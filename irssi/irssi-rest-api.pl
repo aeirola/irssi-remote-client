@@ -101,7 +101,6 @@ Class containing all the methods made available through the JSON-RPC API
 package Irssi::JSON::RPC::Commander;
 
 use Irssi::TextUI;  # Enable access to scrollback history, Irssi::UI::Window->view is defined here!
-use Time::HiRes;
 
 =pod
 Plain constructor
@@ -174,6 +173,11 @@ sub getWindow {
 =pod
 Get window lines
 
+Timestamp format for lines is a floating point number as seconds since epoch.
+Contrary to normal logic, the fractional part is not the milliseconds of the timestamp,
+but the sub-second index of the line. This is to enable distinction between lines that have
+the same timestamp second, even though irssis timestamp resolution is one second.
+
 Names params:
  - refnum (int): Window reference number
  - timestampLimit (int): Minimum age (in seconds since epoch) of line to return
@@ -194,77 +198,83 @@ sub getWindowLines {
 	my $row_limit = $args{rowLimit} || 100;
 	my $timeout = $args{timeout};
 
-	my $window = Irssi::window_find_refnum($refnum);
-	unless ($window) {return [];};
+	my $window = Irssi::window_find_refnum($refnum) or return [];
 	my $view = $window->view;
 	my $buffer = $view->{buffer};
-	my $line = $buffer->{cur_line};
+	my $prev = $buffer->{cur_line};
 
-	# Return empty if no (new) lines
-	if (!defined($line) || $line->{info}->{time} <= $timestamp_limit) {
-		if ($timeout) {
-			# Wait for lines, return a deferred response definition object
-			my $start_time = Time::HiRes::time();
-			my $deferred = Irssi::JSON::RPC::DeferredResponse->new();
-			my $event_handler = sub {
-				my ($dest, $text, $formatted_text) = @_;
-				my $data;
-				if ($dest) {
-					Irssi::timeout_remove($deferred->{timeout_tag});
-
-					# Since the text timestamps have one second resolution,
-					# we need to sleep until the current second is over,
-					# so that all lines for that second will be returned if a line
-					my $duration = Time::HiRes::time() - $start_time;
-					my $sleep_duration = 1.01 - $duration;
-					if ($sleep_duration > 0) {
-						print "Sleeping for $sleep_duration\n";
-						Time::HiRes::sleep($sleep_duration);
-					}
-
-					$data = $self->getWindowLines('refnum' => $refnum,
-												  'timestampLimit' => $timestamp_limit,
-												  'rowLimit' => $row_limit);
-				} else {
-					# Timed out, no content
-					Irssi::JSON::RPC::EventHandler::remove_text_listener($deferred->{event_tag});
-					$data = [];
-				}
-				my $func = $deferred->{response_handler};
-				&$func($deferred, $data);
-			};
-			$deferred->{timeout_tag} = &$outside_call(\&Irssi::timeout_add_once, 
-													  $timeout*1000, $event_handler, undef);
-			$deferred->{event_tag} = Irssi::JSON::RPC::EventHandler::add_text_listener($refnum, $event_handler);
-			return $deferred;
+	# Find line to start from
+	my $line;
+	while ($prev) {
+		if ($row_limit <= 0 ||
+			$prev->{info}->{time} <= $timestamp_limit) {
+			# Stop
+			$prev = undef;
 		} else {
-			return [];
-		}
-	}
-
-	# Scroll backwards until we find first line we want to add
-	while($row_limit > 1) {
-		my $prev = $line->prev();
-		if ($prev and ($prev->{info}->{time} > $timestamp_limit)) {
 			$line = $prev;
+			$prev = $prev->prev();
 			$row_limit--;
-		} else {
-			# Break from loop if list ends
-			$row_limit = 0;
 		}
 	}
 
-	my @linesArray;
+	# Initialize sub-second index
+	my $SUBEC_RESOLUTION = 1000;
+	my $subsec_index = 0;
+	if (defined($line)) {
+		my $current_timestamp = $line->{info}->{time};
+		$prev = $line->prev();
+		while ($prev && $current_timestamp == $prev->{info}->{time}) {
+			$subsec_index++;
+			$prev = $prev->prev();
+		}
+	}
+
 	# Scroll forwards and add all lines till end
+	my @linesArray;
+	my $current_timestamp = 0;
 	while($line) {
+		my $timestamp = $line->{info}->{time};
+		if ($timestamp == $current_timestamp) {
+			$subsec_index++;
+		} else {
+			$current_timestamp = $timestamp;
+			$subsec_index = 0;
+		}
+
 		push(@linesArray, {
-			'timestamp' => $line->{info}->{time},
+			'timestamp' => $timestamp + ($subsec_index/$SUBEC_RESOLUTION),
 			'text' => $line->get_text(0),
 		});
 		$line = $line->next();
 	}
-
-	return \@linesArray;
+	
+	if (scalar(@linesArray) == 0 && defined($timeout)) {
+		# Wait for lines, return a deferred response definition object
+		my $deferred = Irssi::JSON::RPC::DeferredResponse->new();
+		my $event_handler = sub {
+			my ($dest, $text, $formatted_text) = @_;
+			my $data;
+			if ($dest) {
+				Irssi::timeout_remove($deferred->{timeout_tag});
+				$data = $self->getWindowLines('refnum' => $refnum,
+											  'timestampLimit' => $timestamp_limit,
+											  'rowLimit' => $row_limit);
+			} else {
+				# Timed out, no content
+				Irssi::JSON::RPC::EventHandler::remove_text_listener($deferred->{event_tag});
+				$data = [];
+			}
+			my $func = $deferred->{response_handler};
+			&$func($deferred, $data);
+		};
+		$deferred->{timeout_tag} = &$outside_call(\&Irssi::timeout_add_once, 
+												  $timeout*1000, $event_handler, undef);
+		$deferred->{event_tag} = Irssi::JSON::RPC::EventHandler::add_text_listener($refnum, $event_handler);
+		return $deferred;
+	} else {
+		# Return array of lines
+		return \@linesArray;
+	}
 }
 
 =pod

@@ -113,15 +113,15 @@ is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 2}, 'result' => {
 		'name' => '#channel',
 		'topic' => 'Something interesting',
 		'nicks' => ['nick1', 'nick2'],
-		'lines' => [{'timestamp' => 1, 'text' => 'line1'}, 
-					{'timestamp' => 2, 'text' => 'line2'}]
+		'lines' => [{'timestamp' => 1.000, 'text' => 'line1'},
+					{'timestamp' => 2.000, 'text' => 'line2'}]
 	});
 is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 404}, 'result' => undef);
 
 # getWindowLines
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2}, 'result' => [
-	{'timestamp' => 1, 'text' => 'line1'},
-	{'timestamp' => 2, 'text' => 'line2'}]);
+	{'timestamp' => 1.000, 'text' => 'line1'},
+	{'timestamp' => 2.000, 'text' => 'line2'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 1},
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 10}, 'result' => []);
