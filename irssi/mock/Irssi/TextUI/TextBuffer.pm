@@ -10,12 +10,10 @@ sub new {
 
 	my $cur_line;
 	my $prev_line;
-	my $time = 1;
 	for my $line (@{$args{lines}}) {
 		$prev_line = $cur_line;
-		$cur_line = Irssi::TextUI::Line->new('text' => $line, 'time' => $time, 'prev' => $prev_line);
+		$cur_line = Irssi::TextUI::Line->new('time' => @$line[0], 'text' => @$line[1], 'prev' => $prev_line);
 		$prev_line->{_next} = $cur_line;
-		$time++;
 	}
 
 	my $self = bless {

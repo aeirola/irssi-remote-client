@@ -94,7 +94,7 @@ license that can be found in the LICENSE file.
        * @type Object
        * @default null
        */
-      id: 1,
+      request_id: 1,
       headers: null,
       ready: function() {
         this.xhr = document.createElement('polymer-xhr');
@@ -134,7 +134,7 @@ license that can be found in the LICENSE file.
         }
       },
       getId: function() {
-        return this.id++;
+        return this.request_id++;
       },
       urlChanged: function() {
         this.autoGo();
@@ -176,7 +176,7 @@ license that can be found in the LICENSE file.
           body.params = JSON.parse(this.params);
         }
         args.body = JSON.stringify(body);
-        return args.url && this.xhr.request(args);
+        return this.xhr.request(args);
       }
     });
   </script>

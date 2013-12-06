@@ -1,4 +1,4 @@
-<polymer-element name="lines-element">
+<polymer-element name="lines-element" extends="window-aware-element">
   <template>
     <style>
       :host {
@@ -16,23 +16,53 @@
       <p>{{line.text}}</p>
     </template>
 
-    <json-rpc-element auto url="https://aie.kapsi.fi/irc/json-rpc"
+    <json-rpc-element id="initialLoad" auto url="https://aie.kapsi.fi/irc/json-rpc"
         method="getWindowLines"
         params='{"refnum": {{refnum}}, "rowLimit": {{rowLimit}}}'
         response="{{lines}}"
         headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'
         on-polymer-response="{{linesLoaded}}">
     </json-rpc-element>
-    <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
+    <json-rpc-element id="longPolling" url="https://aie.kapsi.fi/irc/json-rpc"
+      method="getWindowLines"
+      params='{"refnum": {{refnum}}, "timestampLimit": {{lastTimestamp}}, "timeout": 300}'
+      headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'
+      on-polymer-response="{{newLineLoaded}}">
+    </json-rpc-element>
   </template>
   <script>
     Polymer('lines-element', {
-      refnum: 1,
       rowLimit: 100,
-      windowChangedSignal: function windowClicked(_, detail) {
-        this.refnum = detail;
+      lastTimestamp: 0,
+      pollRequset: null,
+      linesLoaded: function linesLoaded(_, e) {
+        console.log(e);
+        if (this.pollRequest) {
+          this.pollRequest.abort();
+        }
+        var lines = e.response;
+        if (lines.length > 0) {
+          var lastLine = lines[lines.length-1];
+          this.lastTimestamp = lastLine.timestamp;
+        }
+
+        this.pollRequest = this.$.longPolling.go();
+        this.async(function() {
+          this.scrollTop = this.scrollHeight;
+        });
       },
-      linesLoaded: function linesLoaded() {
+      newLineLoaded: function newLineLoaded(_, e) {
+        console.log(e);
+        this.pollRequest.abort();
+        var lines = e.response;
+
+        if (lines.length > 0) {
+          var lastLine = lines[lines.length-1];
+          this.lastTimestamp = lastLine.timestamp;
+          this.lines = this.lines.concat(lines);
+        }
+
+        this.pollRequest = this.$.longPolling.go();
         this.async(function() {
           this.scrollTop = this.scrollHeight;
         });

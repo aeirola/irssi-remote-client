@@ -1,15 +1,43 @@
-<polymer-element name="input-element">
+<polymer-element name="input-element" extends="window-aware-element">
   <template>
     <style>
       :host {
         width: 100%;
         display: block;
       }
+
+      input {
+        font-family: monospace;
+        width: 100%;
+      }
     </style>
-    <input type="text">
+
+    <form on-submit="{{sendLine}}">
+      <input id="line" name="line" type="text" autocomplete="off" autofocus spellcheck="true">
+      <button>-></button>
+    </form>
+
+    <json-rpc-element id="rpc" url="https://aie.kapsi.fi/irc/json-rpc"
+      method="sendMessage"
+      params='{"refnum": {{refnum}}, "message": "{{line}}"}'
+      response="{{lines}}"
+      headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'
+      on-polymer-response="{{linesLoaded}}">
+    </json-rpc-element>
+
   </template>
   <script>
     Polymer('input-element', {
+      line: '',
+      sendLine: function sendLine(e) {
+        e.preventDefault();
+        this.line = this.$.line.value;
+        this.$.line.value = "";
+
+        this.async(function() {
+          this.$.rpc.go();
+        });
+      }
     });
   </script>
 </polymer-element>

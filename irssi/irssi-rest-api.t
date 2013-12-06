@@ -87,18 +87,25 @@ is_response('url' => '/json-rpc?method=getWindows', 'data' => '{"version":"1.1",
 Irssi::Test::set_window('refnum' => 1, 'type' => undef, 'name' => '(status)');
 Irssi::Test::set_window('refnum' => 2, 'type' => 'CHANNEL', 'name' => '#channel',
 						'topic' => 'Something interesting', 'nicks' => ['nick1', 'nick2'],
-						'lines' => ['line1', 'line2']);
+						'lines' => [[1, 'line1'], [2, 'line2']]);
+Irssi::Test::set_window('refnum' => 3, 'type' => 'CHANNEL', 'name' => '#fast_channel',
+						'topic' => 'Something fast', 'nicks' => ['nick1', 'nick2'],
+						'lines' => [[1, 'line1'], [2, 'line2'], [2, 'line3'], [2, 'line4'], [3, 'line5']]);
 
 # getWindows
 is_jrpc('method' => 'getWindows', 'result' => [{
- 		'refnum' => 1,
- 		'type' => 'EMPTY',
- 		'name' => '(status)'
- 	},{
- 		'refnum' => 2,
- 		'type' => 'CHANNEL',
- 		'name' => '#channel'
- 	}]);
+		'refnum' => 1,
+		'type' => 'EMPTY',
+		'name' => '(status)'
+	},{
+		'refnum' => 3,
+		'type' => 'CHANNEL',
+		'name' => '#fast_channel'
+	},{
+		'refnum' => 2,
+		'type' => 'CHANNEL',
+		'name' => '#channel'
+	}]);
 
 # getWindow
 is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 1}, 'result' => {
@@ -122,18 +129,36 @@ is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 404}, 'result' => unde
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2}, 'result' => [
 	{'timestamp' => 1.000, 'text' => 'line1'},
 	{'timestamp' => 2.000, 'text' => 'line2'}]);
+# Limits
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 1},
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 10}, 'result' => []);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'rowLimit' => 1},
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
+
+# Subsecond timestamps
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'timestampLimit' => 2.000},
+		'result' => [{'timestamp' => 2.001, 'text' => 'line3'},
+					 {'timestamp' => 2.002, 'text' => 'line4'},
+					 {'timestamp' => 3.000, 'text' => 'line5'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 2},
+		'result' => [{'timestamp' => 2.002, 'text' => 'line4'},
+					 {'timestamp' => 3.000, 'text' => 'line5'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 2, 'timestampLimit' => 2.000},
+		'result' => [{'timestamp' => 2.002, 'text' => 'line4'},
+					 {'timestamp' => 3.000, 'text' => 'line5'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'timestampLimit' => 2.001},
+		'result' => [{'timestamp' => 2.002, 'text' => 'line4'},
+					 {'timestamp' => 3.000, 'text' => 'line5'}]);
+
+# Timeouts
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 1, 'timeout' => 1000},
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 2, 'timeout' => 100},
 		'result' => []);
 Irssi::Test::add_hook(sub {Irssi::window_find_refnum(2)->print('hi')});
-#is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 2, 'timeout' => 100},
-#		'result' => [{'timestamp' => 3, 'text' => 'hi'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 2, 'timeout' => 100},
+		'result' => [{'timestamp' => 3, 'text' => 'hi'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 404}, 'result' => []);
 
 # sendMessage

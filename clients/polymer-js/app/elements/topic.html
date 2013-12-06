@@ -1,4 +1,4 @@
-<polymer-element name="topic-element">
+<polymer-element name="topic-element" extends="window-aware-element">
   <template>
     <style>
       @host { :scope {display: block;} }
@@ -12,14 +12,9 @@
         response="{{window}}"
         headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'>
     </json-rpc-element>
-    <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
   </template>
   <script>
     Polymer('topic-element', {
-      refnum: 1,
-      windowChangedSignal: function windowClicked(e, detail, sender) {
-        this.refnum = detail;
-      }
     });
   </script>
 </polymer-element>

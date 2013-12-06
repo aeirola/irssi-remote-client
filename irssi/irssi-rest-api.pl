@@ -101,6 +101,8 @@ Class containing all the methods made available through the JSON-RPC API
 package Irssi::JSON::RPC::Commander;
 
 use Irssi::TextUI;  # Enable access to scrollback history, Irssi::UI::Window->view is defined here!
+use POSIX qw(modf);
+
 
 =pod
 Plain constructor
@@ -205,38 +207,51 @@ sub getWindowLines {
 
 	# Find line to start from
 	my $line;
-	while ($prev) {
-		if ($row_limit <= 0 ||
-			$prev->{info}->{time} <= $timestamp_limit) {
-			# Stop
-			$prev = undef;
-		} else {
-			$line = $prev;
-			$prev = $prev->prev();
-			$row_limit--;
-		}
+	while (defined($prev) &&
+			$row_limit > 0 &&
+			$prev->{info}->{time} > $timestamp_limit) {
+		$line = $prev;
+		$prev = $prev->prev();
+		$row_limit--;
 	}
+
+	# TODO: this needs some refactoring
 
 	# Initialize sub-second index
 	my $SUBEC_RESOLUTION = 1000;
+	my $major_line;
+	my $minor_lines = 0;
+
+	# Backwards until we hit next timestamp second
+	$prev = defined($line) ? $line->prev() : undef;
+	my $major_line_ts = defined($prev) ? int($prev->{info}->{time}) : undef;
+	while (defined($prev) &&
+			$prev->{info}->{time} == $major_line_ts) {
+		$major_line = $prev;
+		$minor_lines++;
+		$prev = $prev->prev();
+	}
+
+	# Forwards until we are at the right sub-second line
+	my $next = defined($major_line) ? $major_line->next() : undef;
 	my $subsec_index = 0;
-	if (defined($line)) {
-		my $current_timestamp = $line->{info}->{time};
-		$prev = $line->prev();
-		while ($prev && $current_timestamp == $prev->{info}->{time}) {
-			$subsec_index++;
-			$prev = $prev->prev();
-		}
+	my $subsec_time_limit = int((POSIX::modf($timestamp_limit))[0] * $SUBEC_RESOLUTION + 0.5);
+	my $subsec_row_limit = $minor_lines - $row_limit - 1;
+	my $subsec_limit = List::Util::max($subsec_time_limit, $subsec_row_limit);
+
+	while (defined($next) &&
+			$subsec_limit >= $subsec_index) {
+		$line = $next;
+		$next = $next->next();
+		$subsec_index++;
 	}
 
 	# Scroll forwards and add all lines till end
 	my @linesArray;
-	my $current_timestamp = 0;
+	my $current_timestamp = $major_line_ts || -1;
 	while($line) {
 		my $timestamp = $line->{info}->{time};
-		if ($timestamp == $current_timestamp) {
-			$subsec_index++;
-		} else {
+		unless ($timestamp == $current_timestamp) {
 			$current_timestamp = $timestamp;
 			$subsec_index = 0;
 		}
@@ -246,6 +261,7 @@ sub getWindowLines {
 			'text' => $line->get_text(0),
 		});
 		$line = $line->next();
+		$subsec_index++;
 	}
 	
 	if (scalar(@linesArray) == 0 && defined($timeout)) {
