@@ -32,29 +32,33 @@
   </template>
   <script>
     Polymer('lines-element', {
+      lines: [],
       rowLimit: 100,
       lastTimestamp: 0,
-      pollRequset: null,
-      linesLoaded: function linesLoaded(_, e) {
-        console.log(e);
-        if (this.pollRequest) {
-          this.pollRequest.abort();
-        }
-        var lines = e.response;
+      pollRequest: null,
+      linesLoaded: function linesLoaded(_, data) {
+        var lines = data.response;
         if (lines.length > 0) {
           var lastLine = lines[lines.length-1];
           this.lastTimestamp = lastLine.timestamp;
         }
+        this.lines = lines;
 
-        this.pollRequest = this.$.longPolling.go();
+        if (this.pollRequest) {
+          this.pollRequest.abort();
+        }
+
         this.async(function() {
+          this.pollRequest = this.$.longPolling.go();
           this.scrollTop = this.scrollHeight;
         });
       },
-      newLineLoaded: function newLineLoaded(_, e) {
-        console.log(e);
-        this.pollRequest.abort();
-        var lines = e.response;
+      newLineLoaded: function newLineLoaded(_, data) {
+        if (data.xhr.status != 200) {
+          // Error
+          return;
+        }
+        var lines = data.response;
 
         if (lines.length > 0) {
           var lastLine = lines[lines.length-1];
@@ -62,8 +66,8 @@
           this.lines = this.lines.concat(lines);
         }
 
-        this.pollRequest = this.$.longPolling.go();
         this.async(function() {
+          this.pollRequest = this.$.longPolling.go();
           this.scrollTop = this.scrollHeight;
         });
       }
