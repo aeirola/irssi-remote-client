@@ -101,6 +101,7 @@ Class containing all the methods made available through the JSON-RPC API
 package Irssi::JSON::RPC::Commander;
 
 use Irssi::TextUI;  # Enable access to scrollback history, Irssi::UI::Window->view is defined here!
+use Time::HiRes;
 
 =pod
 Plain constructor
@@ -203,12 +204,24 @@ sub getWindowLines {
 	if (!defined($line) || $line->{info}->{time} <= $timestamp_limit) {
 		if ($timeout) {
 			# Wait for lines, return a deferred response definition object
+			my $start_time = Time::HiRes::time();
 			my $deferred = Irssi::JSON::RPC::DeferredResponse->new();
 			my $event_handler = sub {
 				my ($dest, $text, $formatted_text) = @_;
 				my $data;
 				if ($dest) {
 					Irssi::timeout_remove($deferred->{timeout_tag});
+
+					# Since the text timestamps have one second resolution,
+					# we need to sleep until the current second is over,
+					# so that all lines for that second will be returned if a line
+					my $duration = Time::HiRes::time() - $start_time;
+					my $sleep_duration = 1.01 - $duration;
+					if ($sleep_duration > 0) {
+						print "Sleeping for $sleep_duration\n";
+						Time::HiRes::sleep($sleep_duration);
+					}
+
 					$data = $self->getWindowLines('refnum' => $refnum,
 												  'timestampLimit' => $timestamp_limit,
 												  'rowLimit' => $row_limit);
@@ -321,7 +334,8 @@ sub add_text_listener {
 		$text_listeners{$refnum} = $window_listeners;
 	}
 	$window_listeners->{$refnum} = $func;
-	return [$refnum, $refnum];
+	my $funcnum = scalar($func);
+	return [$refnum, $funcnum];
 }
 
 sub remove_text_listener {
@@ -471,6 +485,10 @@ sub deferred_http_response_handler {
 
 	$result->{result} = $return_value;
 	my $http_response = $marshaller->result_to_response($result);
+
+	if ($settings{allow_cors}) {
+		$http_response->header('Access-Control-Allow-Origin' => '*');
+	}
 
 	my $client_conn = $connection->{handle};
 	if ($client_conn) {
