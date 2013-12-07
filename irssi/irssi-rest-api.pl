@@ -203,53 +203,48 @@ sub getWindowLines {
 	my $window = Irssi::window_find_refnum($refnum) or return [];
 	my $view = $window->view;
 	my $buffer = $view->{buffer};
-	my $prev = $buffer->{cur_line};
 
-	# Find line to start from
-	my $line;
-	while (defined($prev) &&
+	# Finding the largest time-stamp that isn't larger than given limit
+	my $ptr = undef;				# Pointer to current line, starts after last line
+	my $ptr_p = $buffer->{cur_line};# Pointer to previous line
+	my $SUBEC_RESOLUTION = 1000;	# Resolution at which we observe subsecond indexes
+	my $subsec_index = 0;			# The subsecond index of the pointer
+
+	# 1. Scroll backwards, until we hit a limit
+	while (defined($ptr_p) &&
 			$row_limit > 0 &&
-			$prev->{info}->{time} > $timestamp_limit) {
-		$line = $prev;
-		$prev = $prev->prev();
+			$ptr_p->{info}->{time} > $timestamp_limit) {
+		$ptr = $ptr_p;
+		$ptr_p = $ptr_p->prev();
 		$row_limit--;
 	}
 
-	# TODO: this needs some refactoring
+	my $current_timestamp = defined($ptr) ? $ptr->{info}->{time} : 0;
+	if (defined($ptr_p)) {
+		# 2. Scroll backwards until we are at the start of the second
+		$current_timestamp = $ptr_p->{info}->{time};
+		while (defined($ptr_p) &&
+				int($ptr_p->{info}->{time}) == $current_timestamp) {
+			$ptr = $ptr_p;
+			$ptr_p = $ptr_p->prev();
+			$row_limit--;
+		}
 
-	# Initialize sub-second index
-	my $SUBEC_RESOLUTION = 1000;
-	my $major_line;
-	my $minor_lines = 0;
-
-	# Backwards until we hit next timestamp second
-	my $major_line_ts = defined($prev) ? int($prev->{info}->{time}) : undef;
-	while (defined($prev) &&
-			$prev->{info}->{time} == $major_line_ts) {
-		$major_line = $prev;
-		$minor_lines++;
-		$prev = $prev->prev();
+		# 3. Scroll forwards until we are at the right sub-second line
+		while (defined($ptr) &&
+				($ptr->{info}->{time} + ($subsec_index/$SUBEC_RESOLUTION) <= $timestamp_limit) ||
+				($row_limit < 0)) {
+			$ptr_p = $ptr;
+			$ptr = $ptr->next();
+			$subsec_index++;
+			$row_limit++;
+		}
 	}
 
-	# Forwards until we are at the right sub-second line
-	my $next = defined($major_line) ? $major_line->next() : undef;
-	my $subsec_index = 0;
-	my $subsec_time_limit = int((POSIX::modf($timestamp_limit))[0] * $SUBEC_RESOLUTION + 0.5);
-	my $subsec_row_limit = $minor_lines - $row_limit - 1;
-	my $subsec_limit = List::Util::max($subsec_time_limit, $subsec_row_limit);
-
-	while (defined($next) &&
-			$subsec_limit >= $subsec_index) {
-		$line = $next;
-		$next = $next->next();
-		$subsec_index++;
-	}
-
-	# Scroll forwards and add all lines till end
+	# Scroll forwards and add all lines until end
 	my @linesArray;
-	my $current_timestamp = $major_line_ts || -1;
-	while($line) {
-		my $timestamp = $line->{info}->{time};
+	while($ptr) {
+		my $timestamp = $ptr->{info}->{time};
 		unless ($timestamp == $current_timestamp) {
 			$current_timestamp = $timestamp;
 			$subsec_index = 0;
@@ -257,9 +252,9 @@ sub getWindowLines {
 
 		push(@linesArray, {
 			'timestamp' => $timestamp + ($subsec_index/$SUBEC_RESOLUTION),
-			'text' => $line->get_text(0),
+			'text' => $ptr->get_text(0),
 		});
-		$line = $line->next();
+		$ptr = $ptr->next();
 		$subsec_index++;
 	}
 	

@@ -122,18 +122,19 @@ is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 2}, 'result' => {
 		'name' => '#channel',
 		'topic' => 'Something interesting',
 		'nicks' => ['nick1', 'nick2'],
-		'lines' => [{'timestamp' => 1.000, 'text' => 'line1'},
-					{'timestamp' => 2.000, 'text' => 'line2'}]
+		'lines' => [{'timestamp' => 1, 'text' => 'line1'},
+					{'timestamp' => 2, 'text' => 'line2'}]
 	});
 is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 404}, 'result' => undef);
 
 # getWindowLines
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2}, 'result' => [
-	{'timestamp' => 1.000, 'text' => 'line1'},
-	{'timestamp' => 2.000, 'text' => 'line2'}]);
+	{'timestamp' => 1, 'text' => 'line1'},
+	{'timestamp' => 2, 'text' => 'line2'}]);
 # Limits
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 1},
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 2}, 'result' => []);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 10}, 'result' => []);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'rowLimit' => 1},
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
@@ -154,6 +155,8 @@ is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 
 					 {'timestamp' => 3.001, 'text' => 'line6'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 100, 'timestampLimit' => 3.000},
 		'result' => [{'timestamp' => 3.001, 'text' => 'line6'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 100, 'timestampLimit' => 3.001},
+		'result' => []);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'timestampLimit' => 2.001},
 		'result' => [{'timestamp' => 2.002, 'text' => 'line4'},
 					 {'timestamp' => 3.000, 'text' => 'line5'},
@@ -190,10 +193,10 @@ for (my $i = 0; $i < scalar(@console); $i++) {
 sub is_jrpc {
 	my %args = @_;
 	my $method = $args{method};
-	my $params = $args{params};
+	my $params = $args{params} || {};
 	my $result = $args{result};
 	my $error = $args{error};
-	my $test_name = $method;
+	my $test_name = "$method (" . JSON::encode_json($params). ")" ;
 	my $id =  $args{id} || 1;
 
 	my $request = {'jsonrpc' => '2.0', 'method' => $method, 'id' => $id};
