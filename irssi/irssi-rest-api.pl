@@ -300,7 +300,13 @@ sub sendMessage {
 	my $self = shift;
 	my %args = @_;
 	my $refnum = $args{refnum} or die 'Missing parameter refnum';
-	my $message = $args{message} or die 'Missing parameter message';
+	my $message = $args{message};
+
+	unless(defined($message)) {
+		die 'Missing parameter message';
+	} elsif ($message eq '') {
+		return undef;
+	}
 
 	# Say to channel on window
 	my $window = Irssi::window_find_refnum($refnum);

@@ -175,6 +175,8 @@ is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 404}, 'result' =>
 # sendMessage
 is_jrpc('method' => 'sendMessage', 'params' => {'refnum' => 2, 'message' => 'hello'});
 is_commands('refnum' => 2, 'commands' => ['msg * hello']);
+is_jrpc('method' => 'sendMessage', 'params' => {'refnum' => 2, 'message' => ''});
+is_commands('refnum' => 2, 'commands' => []);
 
 
 # Test unloading
