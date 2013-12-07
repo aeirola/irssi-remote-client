@@ -220,7 +220,7 @@ sub getWindowLines {
 	}
 
 	my $current_timestamp = defined($ptr) ? $ptr->{info}->{time} : 0;
-	if (defined($ptr_p)) {
+	if (defined($ptr_p) && ($row_limit == 0 || $ptr_p->{info}->{time} == int($timestamp_limit))) {
 		# 2. Scroll backwards until we are at the start of the second
 		$current_timestamp = $ptr_p->{info}->{time};
 		while (defined($ptr_p) &&
