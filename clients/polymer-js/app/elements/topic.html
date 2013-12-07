@@ -6,11 +6,11 @@
 
     {{window.name}} {{window.topic}}
 
-    <json-rpc-element auto url="https://aie.kapsi.fi/irc/json-rpc"
+    <json-rpc-element auto url="{{url}}/json-rpc"
         method="getWindow"
         params='{"refnum": {{refnum}}}'
         response="{{window}}"
-        headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'>
+        headers="{{headers}}">
     </json-rpc-element>
   </template>
   <script>

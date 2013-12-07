@@ -1,4 +1,4 @@
-<polymer-element name="windows-element">
+<polymer-element name="windows-element" extends="window-aware-element">
   <template>
     <style>
       :host { 
@@ -16,10 +16,10 @@
       </template>
     </ul>
 
-    <json-rpc-element auto url="https://aie.kapsi.fi/irc/json-rpc"
+    <json-rpc-element auto url="{{url}}/json-rpc"
         method="getWindows"
         response="{{windows}}"
-        headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'>
+        headers="{{headers}}">
     </json-rpc-element>
   </template>
   <script>

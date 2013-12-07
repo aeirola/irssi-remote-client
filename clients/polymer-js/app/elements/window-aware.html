@@ -1,14 +1,19 @@
 <polymer-element name="window-aware-element">
   <template>
     <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
+    <polymer-signals on-polymer-signal-settings-changed="{{settingsChangedSignal}}"></polymer-signals>
   </template>
   <script>
     Polymer('window-aware-element', {
       refnum: 2,
-      url: 'https://aie.kapsi.fi/irc/json-rpc',
-      headers: {"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"},
+      url: "",
+      headers: {"Irssi-Authorization": ""},
       windowChangedSignal: function windowClicked(e, detail, sender) {
         this.refnum = detail;
+      },
+      settingsChangedSignal: function settingsChangedSignal(event, detail, sender) {
+        this.url = detail.url;
+        this.headers['Irssi-Authorization'] = detail.password;
       }
     });
   </script>

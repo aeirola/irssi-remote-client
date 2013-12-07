@@ -17,11 +17,11 @@
       <button>-></button>
     </form>
 
-    <json-rpc-element id="rpc" url="https://aie.kapsi.fi/irc/json-rpc"
+    <json-rpc-element id="rpc" url="{{url}}/json-rpc"
       method="sendMessage"
       params='{"refnum": {{refnum}}, "message": "{{line}}"}'
       response="{{lines}}"
-      headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'
+      headers="{{headers}}"
       on-polymer-response="{{linesLoaded}}">
     </json-rpc-element>
 

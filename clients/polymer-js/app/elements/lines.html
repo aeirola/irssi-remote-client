@@ -16,17 +16,17 @@
       <p>{{line.text}}</p>
     </template>
 
-    <json-rpc-element id="initialLoad" auto url="https://aie.kapsi.fi/irc/json-rpc"
-        method="getWindowLines"
-        params='{"refnum": {{refnum}}, "rowLimit": {{rowLimit}}}'
-        response="{{lines}}"
-        headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'
-        on-polymer-response="{{linesLoaded}}">
-    </json-rpc-element>
-    <json-rpc-element id="longPolling" url="https://aie.kapsi.fi/irc/json-rpc"
+    <json-rpc-element id="initialLoad" auto url="{{url}}/json-rpc"
       method="getWindowLines"
-      params='{"refnum": {{refnum}}, "timestampLimit": {{lastTimestamp}}, "timeout": 300}'
-      headers='{"Irssi-Authorization": "8AZxhrn7iuVRGKSDKHIZkUZ9cwUpKNZQoEOch4cQkq36s5BLs6EGv83bS1ItwGufvqbCmDasj/Uzeuwlm8ca5A"}'
+      params='{"refnum": {{refnum}}, "rowLimit": {{rowLimit}}}'
+      response="{{lines}}"
+      headers="{{headers}}"
+      on-polymer-response="{{linesLoaded}}">
+    </json-rpc-element>
+    <json-rpc-element id="longPolling" url="{{url}}/json-rpc"
+      method="getWindowLines"
+      params='{"refnum": {{refnum}}, "timestampLimit": {{lastTimestamp}}, "timeout": 10}'
+      headers="{{headers}}"
       on-polymer-response="{{newLineLoaded}}">
     </json-rpc-element>
   </template>
