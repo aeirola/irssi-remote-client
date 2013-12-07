@@ -223,7 +223,6 @@ sub getWindowLines {
 	my $minor_lines = 0;
 
 	# Backwards until we hit next timestamp second
-	$prev = defined($line) ? $line->prev() : undef;
 	my $major_line_ts = defined($prev) ? int($prev->{info}->{time}) : undef;
 	while (defined($prev) &&
 			$prev->{info}->{time} == $major_line_ts) {

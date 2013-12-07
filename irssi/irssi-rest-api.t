@@ -90,7 +90,9 @@ Irssi::Test::set_window('refnum' => 2, 'type' => 'CHANNEL', 'name' => '#channel'
 						'lines' => [[1, 'line1'], [2, 'line2']]);
 Irssi::Test::set_window('refnum' => 3, 'type' => 'CHANNEL', 'name' => '#fast_channel',
 						'topic' => 'Something fast', 'nicks' => ['nick1', 'nick2'],
-						'lines' => [[1, 'line1'], [2, 'line2'], [2, 'line3'], [2, 'line4'], [3, 'line5']]);
+						'lines' => [[1, 'line1'],
+									[2, 'line2'], [2, 'line3'], [2, 'line4'],
+									[3, 'line5'], [3, 'line6']]);
 
 # getWindows
 is_jrpc('method' => 'getWindows', 'result' => [{
@@ -140,16 +142,22 @@ is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'rowLimit' => 
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'timestampLimit' => 2.000},
 		'result' => [{'timestamp' => 2.001, 'text' => 'line3'},
 					 {'timestamp' => 2.002, 'text' => 'line4'},
-					 {'timestamp' => 3.000, 'text' => 'line5'}]);
-is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 2},
+					 {'timestamp' => 3.000, 'text' => 'line5'},
+					 {'timestamp' => 3.001, 'text' => 'line6'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 3},
 		'result' => [{'timestamp' => 2.002, 'text' => 'line4'},
-					 {'timestamp' => 3.000, 'text' => 'line5'}]);
-is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 2, 'timestampLimit' => 2.000},
+					 {'timestamp' => 3.000, 'text' => 'line5'},
+					 {'timestamp' => 3.001, 'text' => 'line6'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 3, 'timestampLimit' => 2.000},
 		'result' => [{'timestamp' => 2.002, 'text' => 'line4'},
-					 {'timestamp' => 3.000, 'text' => 'line5'}]);
+					 {'timestamp' => 3.000, 'text' => 'line5'},
+					 {'timestamp' => 3.001, 'text' => 'line6'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'rowLimit' => 100, 'timestampLimit' => 3.000},
+		'result' => [{'timestamp' => 3.001, 'text' => 'line6'}]);
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 3, 'timestampLimit' => 2.001},
 		'result' => [{'timestamp' => 2.002, 'text' => 'line4'},
-					 {'timestamp' => 3.000, 'text' => 'line5'}]);
+					 {'timestamp' => 3.000, 'text' => 'line5'},
+					 {'timestamp' => 3.001, 'text' => 'line6'}]);
 
 # Timeouts
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 1, 'timeout' => 1000},
