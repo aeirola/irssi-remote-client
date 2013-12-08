@@ -1,5 +1,121 @@
-TODO:
------
+Installing
+----------
+
+### Installing the requirements
+
+The script depends on the following CPAN packages:
+ * Try::Tiny
+ * JSON::RPC::Common
+ * Digest::SHA
+
+
+If you have root:
+ * Just install the packages `cpan Try::Tiny JSON::RPC::Common Digest::SHA`
+
+If you dont have root:
+ * Install cpanminus: `curl -L http://cpanmin.us | perl - App::cpanminus`
+ * Install locallib: `$HOME/perl5/bin/cpanm -n --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)`
+ * Install dependencies: `$HOME/perl5/bin/cpanm -n Moose JSON::RPC::Common Try::Tiny Digest::SHA`
+ * Add local perl path to bash env `echo 'eval $(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)' >> ~/.bash_profile`
+ * Set local perl path for running irssi instance `/script exec push(@INC, "$ENV{'HOME'}/perl5/lib/perl5")`
+
+### Installing the script
+ * Create directories: `mkdir -p ~/.irssi/scripts/autorun/`
+ * Download script: `curl -o ~/.irssi/scripts/remote-client.pl https://raw.github.com/aeirola/irssi-rest-api/master/irssi/remote-client.pl`
+ * (Optional) Set autorun: `ln -s ../remote-client.pl ~/.irssi/scripts/autorun/`
+ * Load script (in Irssi): `/script load remote-client`
+
+
+JSON-RPC API
+------------
+
+JSON-RPC v2 protocol for controlling irssi. This is out of date.
+
+
+### URLs:
+HTTP url: /json-rpc (POST)
+WebSocket url: /json-rpc/websocket (reserved, not in use)
+
+
+### Methods:
+
+```
+--> { "method": "getWindows", "id": 1}
+<-- { "error": null, "id": 1, "result": 
+		{
+			1: {
+				"name": "#irssi",
+				"channel": "#irssi"
+			},
+			...
+		}
+	}
+```
+
+```
+--> { "method": "getWindow", "params": {"windowId": 1}, "id": 1}
+<-- { "error": null, "id": 1, "result": 
+		{
+			"name": "#irssi",
+			"channel": "#irssi",
+			"nicks": [
+				{
+					"name": "Spaceball",
+					"mode": "op"|"voice"|null
+				},
+				...
+			]
+		}
+	}
+```
+
+```
+--> { "method": "getWindowLines", "params": {"windowId": 1, "timestamp": "2013-10-24T17:04:12.12341"}, "id": 1}
+<-- { "error": null, "id": 1, "result": 
+		[
+			{
+				"timestamp": "2013-10-24T17:06:12.54326",
+				"text": "<Spaceball> Lol, i'm on irc"
+			},
+			...
+		]
+	}
+```
+
+```
+--> { "method": "sendMessage": "params": {"windowId": 1, "message": "Lol, i'm on irc"}, "id": 1}
+<-- { "error": null", "id": 1, "result": 
+		{
+			"timestamp": "2013-10-24T17:10:45.12415",
+			"text": "lol, i'm on irc"
+		}
+	}
+```
+
+
+### Usage example
+
+* `/script load remote-client`
+* `curl -POST http://localhost:10000/http -d '{ "method": "getWindows", "id": 1}'`
+
+
+
+Testing
+-------
+
+Requirements:
+ * Test::More
+ * JSON
+ * LWP::UserAgent
+
+Run tests with `perl remote-client.t` in the `irssi` directory. 
+
+Tests use mocked versions of the Irssi perl interfaces. These interfaces are not complete, and only implement the bare functions used by the script.
+
+
+Future improvements
+-------------------
+
  - Fix test threading so that connection keep-alive will be used
  - OOO Modular structure: commands, tcp handling, http handling, websocket handling, rpc handling
  - Correct JSON-RPC response codes
@@ -7,42 +123,4 @@ TODO:
  - GZIP compression (IO::Compress::Gzip)
  - SSL support (HTTP::Daemon::SSL)
 
-Requirements:
- * Try::Tiny
- * HTTP::Daemon
- * HTTP::Status
- * HTTP::Response
- * JSON::RPC::Common
- * Digest::SHA
-
-
-
-Installing
-----------
-
-If you have root:
- * Just install the packages `cpan Try::Tiny JSON::RPC::Common`
-
-If you dont have root:
- * Install stuff with cpanp: `cpanp i Try::Tiny JSON::RPC::Common`
-
- If you don't have cpanp:
-	 * Install cpanminus: `curl -L http://cpanmin.us | perl - App::cpanminus`
-	 * Install locallib: `$HOME/perl5/bin/cpanm -n --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)`
-	 * Install dependencies: `$HOME/perl5/bin/cpanm -n Moose JSON::RPC::Common Data::GUID`
-	 * Add bash env `echo 'eval $(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)' >> ~/.bash_profile`
-	 * Set lib path for running irssi instance `/script exec push(@INC, "$ENV{'HOME'}/perl5/lib/perl5")`
-
-
-Testing:
---------
-
-Requirements:
- * Test::More
- * JSON
- * LWP::UserAgent
-
-Run tests with `perl irssi-rest-api.t`
-
-Tests use mocked versions of the Irssi perl interfaces. These interfaces are not complete, and only implement the bare functions used by the script.
 

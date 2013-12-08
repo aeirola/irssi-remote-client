@@ -16,23 +16,23 @@ use Irssi qw( %input_listeners %signal_listeners @console);
 
 # Load script
 our ($VERSION, %IRSSI);
-require_ok('irssi-rest-api.pl');
+require_ok('remote-client.pl');
 
 my $port = 47895;
 my $password = 'test_password';
-Irssi::settings_set_int('rest_port', $port);
-Irssi::settings_set_str('rest_password', $password);
-Irssi::settings_set_int('rest_log_level', 0);
+Irssi::settings_set_int('remote_client_port', $port);
+Irssi::settings_set_str('remote_client_password', $password);
+Irssi::settings_set_int('remote_client_log_level', 0);
 
 
 # Test static fields
 like($VERSION, qr/^\d+\.\d+$/, 'Version format is correct');
-like($IRSSI{name}, qr/^irssi .* api$/, 'Contains name');
+like($IRSSI{name}, qr/^Irssi .*remote.*$/, 'Contains name');
 like($IRSSI{authors}, qr/^.*Axel.*$/, 'Contains author');
 like($IRSSI{contact}, qr/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/, 'Correctly formatted email');
 like($console[-1], qr/$port/, 'Loading line written');
-isnt(Irssi::settings_get_str('rest_password'), undef, 'Password setting added');
-isnt(Irssi::settings_get_int('rest_port'), undef, 'Port setting added');
+isnt(Irssi::settings_get_str('remote_client_password'), undef, 'Password setting added');
+isnt(Irssi::settings_get_int('remote_client_port'), undef, 'Port setting added');
 
 # Check existence of listeners
 is(scalar(keys(%input_listeners)), 1, 'Socket input listener set up');
@@ -47,9 +47,9 @@ is_response('code' => 401, 'test_name' => 'Unauthorized request');
 $ua->default_header('Irssi-Authorization' => sha512_base64($password));
 is_response('code' => 404, 'test_name' => 'Invalid path');
 
-Irssi::settings_set_str('rest_password', 'invalid_password');
+Irssi::settings_set_str('remote_client_password', 'invalid_password');
 is_response('code' => 401, 'test_name' => 'Unauthorized request');
-Irssi::settings_set_str('rest_password', $password);
+Irssi::settings_set_str('remote_client_password', $password);
 
 # Test CORS settings
 is_response('method' => 'OPTIONS', 'test_name' => 'CORS disabled', expected_headers => {
@@ -57,13 +57,13 @@ is_response('method' => 'OPTIONS', 'test_name' => 'CORS disabled', expected_head
 	'Access-Control-Allow-Methods' => undef,
 	'Access-Control-Allow-Headers' => undef,
 	'Access-Control-Max-Age' => undef});
-Irssi::settings_set_bool('rest_allow_cors', 1);
+Irssi::settings_set_bool('remote_client_allow_cors', 1);
 is_response('method' => 'OPTIONS', 'test_name' => 'CORS enabled', expected_headers => {
 	'Access-Control-Allow-Origin' => '*',
 	'Access-Control-Allow-Methods' => 'GET, POST, OPTIONS',
 	'Access-Control-Allow-Headers' => 'Irssi-Authorization, Content-Type',
 	'Access-Control-Max-Age' => '1728000'});
-Irssi::settings_set_bool('rest_allow_cors', 0);
+Irssi::settings_set_bool('remote_client_allow_cors', 0);
 
 # Check JSON RPC interface
 is_jrpc('method' => 'getWindows', 'result' => []);

@@ -4,14 +4,14 @@ use strict;
 
 use Irssi;          # Interfacing with irssi
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 our %IRSSI = (
 	authors     => 'Axel Eirola',
 	contact     => 'axel.eirola@iki.fi',
-	name        => 'irssi rest api',
+	name        => 'Irssi remote client',
 	description => 'This script allows ' .
 				   'remote clients to  ' .
-				   'control irssi via REST API',
+				   'control Irssi over HTTP',
 	license     => 'Public Domain',
 );
 
@@ -64,21 +64,21 @@ package Irssi::JSON::RPC::Settings;
 use Digest::SHA qw(sha512_base64);	# Password hashing
 
 sub setup {
-	&$outside_call(\&Irssi::settings_add_int, 'rest', 'rest_port', 10000);
-	&$outside_call(\&Irssi::settings_add_str, 'rest', 'rest_password', 'd0ntLe@veM3');
-	&$outside_call(\&Irssi::settings_add_int, 'rest', 'rest_log_level', 2);
-	&$outside_call(\&Irssi::settings_add_bool, 'rest', 'rest_allow_cors', 0);
+	&$outside_call(\&Irssi::settings_add_int, 'remote_client', 'remote_client_port', 10000);
+	&$outside_call(\&Irssi::settings_add_str, 'remote_client', 'remote_client_password', 'd0ntLe@veM3');
+	&$outside_call(\&Irssi::settings_add_int, 'remote_client', 'remote_client_log_level', 3);
+	&$outside_call(\&Irssi::settings_add_bool, 'remote_client', 'remote_client_allow_cors', 0);
 
 	reload_settings();
 	&$outside_call(\&Irssi::signal_add_last, 'setup changed', \&reload_settings);
 }
 
 sub reload_settings {
-	$settings{password_hash} = sha512_base64(&$outside_call(\&Irssi::settings_get_str, 'rest_password'));
-	$settings{log_level} = &$outside_call(\&Irssi::settings_get_int, 'rest_log_level');
-	$settings{allow_cors} = &$outside_call(\&Irssi::settings_get_bool, 'rest_allow_cors');
+	$settings{password_hash} = sha512_base64(&$outside_call(\&Irssi::settings_get_str, 'remote_client_password'));
+	$settings{log_level} = &$outside_call(\&Irssi::settings_get_int, 'remote_client_log_level');
+	$settings{allow_cors} = &$outside_call(\&Irssi::settings_get_bool, 'remote_client_allow_cors');
 
-	my $new_port = &$outside_call(\&Irssi::settings_get_int, 'rest_port');
+	my $new_port = &$outside_call(\&Irssi::settings_get_int, 'remote_client_port');
 	my $old_port = $settings{port} || 0;
 	if ($new_port != $old_port) {
 		$settings{port} = $new_port;
@@ -496,7 +496,7 @@ sub handle_http_request {
 			$deferred->{result} = $result;
 			$deferred->{connection} = $connection;
 			$deferred->{response_handler} = \&deferred_http_response_handler;
-			return undef;
+			return;
 		} else {
 			return $marshaller->result_to_response($result);
 		}
@@ -564,7 +564,7 @@ sub setup {
 		return;
 	}
 	$server->{handle} = $handle;
-	Irssi::JSON::RPC::Misc::logg("HTTP server started on port $server_port", $log_levels{INFO});
+	Irssi::JSON::RPC::Misc::logg("HTTP server started on port $server_port", $log_levels{WARNING});
 
 	# Add handler for server connections
 	my $tag = &$outside_call(\&Irssi::input_add, fileno($handle), Irssi::INPUT_READ, 
