@@ -1,0 +1,19 @@
+<polymer-element name="nicklist-element">
+  <template>
+    <ul>
+      <template repeat="{{nick in nicks}}">
+        <li>{{nick}}</li>
+      </template>
+    </ul>
+
+    <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('nicklist-element', {
+      nicks: [],
+      windowChangedSignal: function windowChangedSignal(_, win) {
+        this.nicks = win.nicks || [];
+      }
+    });
+  </script>
+</polymer-element>

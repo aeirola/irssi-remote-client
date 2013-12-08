@@ -1,4 +1,4 @@
-<polymer-element name="input-element" extends="window-aware-element">
+<polymer-element name="input-element">
   <template>
     <style>
       :host {
@@ -17,14 +17,12 @@
       <button>-></button>
     </form>
 
-    <json-rpc-element id="rpc" url="{{url}}/json-rpc"
+    <irssi-rpc-element renfum id="rpc"
       method="sendMessage"
-      params='{"refnum": {{refnum}}, "message": "{{line}}"}'
+      params='{"message": "{{line}}"}' refnum
       response="{{lines}}"
-      headers="{{headers}}"
       on-polymer-response="{{linesLoaded}}">
-    </json-rpc-element>
-
+    </irssi-rpc-element>
   </template>
   <script>
     Polymer('input-element', {

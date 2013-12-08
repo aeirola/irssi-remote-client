@@ -1,0 +1,30 @@
+<polymer-element name="irssi-rpc-element" attributes="auto method params refnum response" extends="json-rpc-element">
+  <template>
+    <polymer-signals on-polymer-signal-settings-changed="{{settingsChangedSignal}}"></polymer-signals>
+    <polymer-signals on-polymer-signal-window-refnum-changed="{{windowRefnumChangedSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('irssi-rpc-element', {
+    url: '',
+    refnum: false,
+    winRefnum: 0,
+    settingsTimeout: 300,
+    headers: {"Irssi-Authorization": ""},
+    windowRefnumChangedSignal: function windowRefnumChangedSignal(_, refnum) {
+      this.winRefnum = refnum;
+    },
+    settingsChangedSignal: function settingsChangedSignal(_, settings) {
+      this.url = settings.url + '/json-rpc';
+      this.headers['Irssi-Authorization'] = settings.password;
+    },
+    go: function go() {
+      if (this.refnum) {
+        var params = this.params ? JSON.parse(this.params) : {};
+        params.refnum = this.winRefnum;
+        this.params = JSON.stringify(params);
+      }
+      return this.super();
+    }
+  });
+  </script>
+</polymer-element>

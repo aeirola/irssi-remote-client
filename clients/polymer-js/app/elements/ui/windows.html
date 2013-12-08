@@ -1,0 +1,43 @@
+<polymer-element name="windows-element">
+  <template>
+    <ul>
+      <template repeat="{{window in windows}}">
+        <li>
+          <a on-click="{{windowClicked}}" data-refnum="{{window.refnum}}">{{window.refnum}} {{window.type}} {{window.name}}</a>
+        </li>
+      </template>
+    </ul>
+
+    <irssi-rpc-element id="windowsLoader" method="getWindows" response="{{windows}}"></irssi-rpc-element>
+    <irssi-rpc-element id="windowLoader" 
+        method="getWindow"
+        refnum
+        response="{{window}}"
+        on-polymer-response="{{windowLoaded}}">
+    </irssi-rpc-element>
+
+    <polymer-signals on-polymer-signal-ready="{{readySignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('windows-element', {
+      refnum: 1,
+      readySignal: function readySignal() {
+        this.fire('polymer-signal', {name: 'window-refnum-changed', data: 1});
+        this.async(function() {
+          this.$.windowsLoader.go();
+          this.$.windowLoader.go();
+        });
+      },
+      windowClicked: function windowClicked(_, _, target) {
+        this.refnum = parseInt(target.attributes['data-refnum'].value);
+        this.fire('polymer-signal', {name: 'window-refnum-changed', data: this.refnum});
+        this.async(function() {
+          this.$.windowLoader.go();
+        });
+      },
+      windowLoaded: function windowLoaded(_, detail) {
+        this.fire('polymer-signal', {name: 'window-changed', data: detail.response});
+      }
+    });
+  </script>
+</polymer-element>

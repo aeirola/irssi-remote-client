@@ -1,0 +1,71 @@
+<polymer-element name="lines-element">
+  <template>
+    <style>
+      :host {
+        display: block;
+        overflow-x: scroll;
+      }
+      p {
+        font-family: monospace;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+
+    <template repeat="{{line in lines}}">
+      <p>{{line.text}}</p>
+    </template>
+
+    <irssi-rpc-element id="longPolling"
+      method="getWindowLines"
+      params='{"timestampLimit": {{lastTimestamp}}, "timeout": 300}' refnum
+      on-polymer-response="{{newLineLoaded}}">
+    </irssi-rpc-element>
+    <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('lines-element', {
+      lines: [],
+      rowLimit: 100,
+      lastTimestamp: 0,
+      pollRequest: null,
+      windowChangedSignal: function windowChangedSignal(_, win) {
+        this._setLines(win.lines);
+        this._poll();
+      },
+      newLineLoaded: function newLineLoaded(_, data) {
+        if (data.xhr.status != 200) {
+          // Error
+          return;
+        }
+
+        this._addLines(data.response);
+        this._poll();
+      },
+      _poll: function _poll() {
+        if (this.pollRequest) {
+          this.pollRequest.abort();
+        }
+
+        this.async(function() {
+          this.pollRequest = this.$.longPolling.go();
+        });
+      },
+      _setLines: function _setLines(lines) {
+        this.lines = [];
+        this._addLines(lines);
+      },
+      _addLines: function _addLines(lines) {
+        if (lines.length > 0) {
+          var lastLine = lines[lines.length-1];
+          this.lastTimestamp = lastLine.timestamp;
+          this.lines = this.lines.concat(lines);
+        }
+
+        this.async(function() {
+          this.scrollTop = this.scrollHeight;
+        });
+      }
+    });
+  </script>
+</polymer-element>

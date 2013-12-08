@@ -1,0 +1,17 @@
+<polymer-element name="topic-element">
+  <template>
+    {{name}} {{topic}}
+
+    <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('topic-element', {
+      name: '',
+      topic: '',
+      windowChangedSignal: function windowChangedSignal(_, win) {
+        this.topic = win.topic || '';
+        this.name = win.name || '';
+      }
+    });
+  </script>
+</polymer-element>

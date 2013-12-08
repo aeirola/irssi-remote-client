@@ -160,10 +160,11 @@ license that can be found in the LICENSE file.
        */
       go: function() {
         var args = this.xhrArgs || {};
-        args.headers = this.headers || null;
+        args.headers = this.headers || {};
         if (args.headers && typeof(args.headers) == 'string') {
           args.headers = JSON.parse(args.headers);
         }
+        args.headers['Content-Type'] = 'application/json-rpc';
         args.callback = this.receive.bind(this);
         args.url = this.url;
         args.method = 'POST';
