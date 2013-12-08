@@ -1,0 +1,53 @@
+<polymer-element name="remote-client-element">
+  <template>
+    <style>
+      @host { :scope {display: block;} }
+    </style>
+
+    <polymer-flex-layout></polymer-flex-layout>
+    <div id="sidebar" class="sidebar {{showSidebar ? 'show' : 'hidden'}}">
+        <div class="tabs btn-group">
+          <button type="button" class="btn btn-default {{sidebarTab == 'windows' ? 'active' : ''}}" 
+            on-click="{{setSidebarTab}}" data-tab="windows">
+            <span class="glyphicon glyphicon-th-large"></span></button>
+
+          <button type="button" class="btn btn-default {{sidebarTab == 'nicks' ? 'active' : ''}}"
+            on-click="{{setSidebarTab}}" data-tab="nicks">
+            <span class="glyphicon glyphicon-th-list"></span></button>
+
+          <button type="button" class="btn btn-default {{sidebarTab == 'settings' ? 'active' : ''}}"
+            on-click="{{setSidebarTab}}" data-tab="settings">
+            <span class="glyphicon glyphicon-wrench"></span></button>
+        </div>
+
+        <div class="content">
+            <windows-element class="{{sidebarTab == 'windows' ? 'show' : 'hidden'}}"></windows-element>
+            <nicklist-element class="{{sidebarTab == 'nicks' ? 'show' : 'hidden'}}"></nicklist-element>
+            <settings-element class="{{sidebarTab == 'settings' ? 'show' : 'hidden'}}"></settings-element>
+        </div>
+    </div>
+    <div class="main" flex>
+        <polymer-flex-layout vertical></polymer-flex-layout>
+        <div class="header">
+          <polymer-flex-layout></polymer-flex-layout>
+          <button on-click="{{toggleSidebar}}" class="btn btn-primary btn-xs">
+            <span class="glyphicon glyphicon-chevron-right"></span></button>
+          <topic-element class="topic" flex></topic-element>
+        </div>
+        <lines-element class="lines" flex></lines-element>
+        <input-element class="input"></input-element>
+    </div>
+  </template>
+  <script>
+    Polymer('remote-client-element', {
+      showSidebar: false,
+      sidebarTab: 'windows',
+      toggleSidebar: function toggleSidebar() {
+        this.showSidebar = !this.showSidebar;
+      },
+      setSidebarTab: function setSidebarTab(_, _, target) {
+        this.sidebarTab = target.attributes['data-tab'].value;
+      }
+    });
+  </script>
+</polymer-element>

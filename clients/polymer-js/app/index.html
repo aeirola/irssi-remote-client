@@ -26,10 +26,12 @@
         <!-- endbuild -->
 
         <!-- Place your HTML imports here -->
-        <link rel="import" href="bower_components/polymer-elements/polymer-flex-layout/polymer-flex-layout.html">
         <link rel="import" href="bower_components/polymer-elements/polymer-ajax/polymer-xhr.html">
         <link rel="import" href="bower_components/polymer-elements/polymer-signals/polymer-signals.html">
         <link rel="import" href="bower_components/polymer-elements/polymer-localstorage/polymer-localstorage.html">
+        <link rel="import" href="bower_components/polymer-elements/polymer-flex-layout/polymer-flex-layout.html">
+
+        <link rel="import" href="elements/remote-client.html">
 
         <link rel="import" href="elements/util/json-rpc.html">
         <link rel="import" href="elements/util/irssi-rpc.html">
@@ -43,29 +45,6 @@
         <link rel="import" href="elements/ui/input.html">
     </head>
     <body>
-        <polymer-flex-layout></polymer-flex-layout>
-        <div class="sidebar">
-            <div class="tabs btn-group">
-              <button type="button" class="btn btn-default">
-                <span class="glyphicon glyphicon-th-large"></span></button>
-              <button type="button" class="btn btn-default">
-                <span class="glyphicon glyphicon-th-list"></span></button>
-              <button type="button" class="btn btn-default">
-                <span class="glyphicon glyphicon-wrench"></span></button>
-            </div>
-            <div class="content">
-                <polymer-flex-layout vertical></polymer-flex-layout>
-                <windows-element flex></windows-element>
-                <nicklist-element></nicklist-element>
-                <settings-element></settings-element>
-            </div>
-
-        </div>
-        <div class="main" flex>
-            <polymer-flex-layout vertical></polymer-flex-layout>
-            <topic-element class="topic"></topic-element>
-            <lines-element class="lines" flex></lines-element>
-            <input-element class="input"></input-element>
-        </div>
+        <remote-client-element></remote-client-element>
     </body>
 </html>

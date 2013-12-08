@@ -1,4 +1,4 @@
-html, body {
+html, body, remote-client-element {
 	height: 100%;
 	margin: 0;
 	padding: 0;
@@ -6,23 +6,39 @@ html, body {
 }
 
 .sidebar {
-	max-width: 10em;
-	margin: 1em;
 	overflow-x: auto;
+	padding: 0.5em;
+	margin-right: 0.5em;
+	background-color: #EEE;
+	border-right: 1px dashed black;
 }
-
 
 .sidebar ul {
-	padding-left: 1em;
+	padding: 0;
 }
 
+.sidebar ul li {
+	list-style-type: none;
+}
+
+.sidebar a {
+	cursor: pointer;
+}
+
+.sidebar .content {
+	margin: 1em;
+}
+
+.sidebar settings-element {
+	width: 20em;
+}
 
 .main {
-	margin-left: 1em;
+	margin: 0;
 }
 
 topic-element {
-	margin-top: 0.5em;
+	margin: 0.5em 0 0 0.5em;
 	font-family: monospace;
 }
 

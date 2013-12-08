@@ -89,8 +89,21 @@ Requirements
 
 Known issues
 ------------
-* Probably leaks connections or something
 * Doesn't have much error handling
+
+TODO
+----
+ * General
+  - Fix encoding
+
+ * Script
+  - nick modes
+  - topic change
+  - general ui change polling
+
+ * Client:
+  - Clean up tabbing code
+
 
 Future improvements
 -------------------
