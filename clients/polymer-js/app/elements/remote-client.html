@@ -30,18 +30,24 @@
         <polymer-flex-layout vertical></polymer-flex-layout>
         <div class="header">
           <polymer-flex-layout></polymer-flex-layout>
-          <button on-click="{{toggleSidebar}}" class="btn btn-primary btn-xs">
-            <span class="glyphicon glyphicon-chevron-right"></span></button>
+          <button on-click="{{toggleSidebar}}" class="btn btn-primary">
+            <span class="glyphicon glyphicon-chevron-{{showSidebar ? 'left' : 'right'}}"></span></button>
           <topic-element class="topic" flex></topic-element>
         </div>
         <lines-element class="lines" flex></lines-element>
         <input-element class="input"></input-element>
     </div>
+
+    <polymer-signals on-polymer-signal-not-configured="{{notConfiguredSignal}}"></polymer-signals>
   </template>
   <script>
     Polymer('remote-client-element', {
       showSidebar: false,
       sidebarTab: 'windows',
+      notConfiguredSignal: function notConfiguredSignal() {
+        this.showSidebar = true;
+        this.sidebarTab = 'settings';
+      },
       toggleSidebar: function toggleSidebar() {
         this.showSidebar = !this.showSidebar;
       },

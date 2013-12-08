@@ -9,6 +9,12 @@
         <label for="password">Password</label>
         <input id="password" class="form-control" type="password" placeholder="password">
       </div>
+
+      <p class="help-block">
+        For instructions on how to set up the remote client script in Irssi,
+        checkout the <a href="https://github.com/aeirola/irssi-rest-api/blob/master/README.md" target="_blank">read-me</a>.
+      </p>
+
       <button class="btn btn-default">Save</button>
     </form>
 
@@ -26,8 +32,12 @@
         this.addEventListener('polymer-localstorage-load', function() {
           if (!ready) {
             this.notify();
-            this.fire('polymer-signal', {name: 'ready'});
-            ready = true;            
+            if (this.url) {
+              this.fire('polymer-signal', {name: 'ready'});
+            } else {
+              this.fire('polymer-signal', {name: 'not-configured'});
+            }
+            ready = true;
           }
         });
       },
