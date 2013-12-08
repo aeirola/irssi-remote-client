@@ -50,8 +50,10 @@
         this.$.urlStore.save();
         this.$.passwordStore.save();
 
-        // Notify watchers
-        this.notify();
+        // Reload
+        window.location.reload();
+        // TODO: Notify watchers
+        //this.notify();
       }
     });
   </script>
