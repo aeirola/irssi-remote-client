@@ -368,7 +368,9 @@ sub remove_text_listener {
 	my ($tag) = @_;
 	my ($refnum, $funcnum) = @$tag;
 	my %window_listeners = %{$text_listeners{$refnum}};
-	delete($window_listeners{$funcnum});
+	if (defined($funcnum)) {
+		delete($window_listeners{$funcnum});
+	}
 }
 
 
