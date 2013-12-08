@@ -2,20 +2,17 @@
   <template>
     <style>
       :host {
-        width: 100%;
         display: block;
       }
-
-      input {
-        font-family: monospace;
-        width: 100%;
-      }
     </style>
-
-    <form on-submit="{{sendLine}}">
-      <input id="line" name="line" type="text" autocomplete="off" autofocus spellcheck="true">
-      <button>-></button>
-    </form>
+    <p>
+      <form on-submit="{{sendLine}}">
+        <polymer-flex-layout></polymer-flex-layout>
+        <input id="line" name="line" type="text" autocomplete="off" autofocus spellcheck="true"
+          class="form-control" flex>
+        <button class="btn btn-info"><span class="glyphicon glyphicon-arrow-right"></span></button>
+      </form>
+    </p>
 
     <irssi-rpc-element renfum id="rpc"
       method="sendMessage"

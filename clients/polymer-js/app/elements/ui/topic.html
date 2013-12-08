@@ -1,6 +1,14 @@
 <polymer-element name="topic-element">
   <template>
-    {{name}} {{topic}}
+    <style>
+      :host:scope {
+        display: block;
+      }
+    </style>
+
+    <p>
+      {{name}} {{topic}}
+    </p>
 
     <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
   </template>

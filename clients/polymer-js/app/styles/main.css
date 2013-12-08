@@ -1,3 +1,46 @@
-body {
-    background: #fafafa;
+html, body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	background-color: white;
+}
+
+.sidebar {
+	max-width: 10em;
+	margin: 1em;
+	overflow-x: auto;
+}
+
+
+.sidebar ul {
+	padding-left: 1em;
+}
+
+
+.main {
+	margin-left: 1em;
+}
+
+topic-element {
+	margin-top: 0.5em;
+	font-family: monospace;
+}
+
+lines-element {
+	overflow-x: scroll;
+	border-bottom: 1px solid black;
+	border-top: 1px solid black;
+}
+
+lines-element p {
+	font-family: monospace;
+	margin: 0;
+	padding: 3px;
+	font-size: 14px;
+	line-height: 15px;
+}
+
+input-element {
+	margin-right: 0.5em;
+	font-family: monospace;
 }

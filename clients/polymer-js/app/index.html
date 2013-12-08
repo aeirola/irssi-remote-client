@@ -26,6 +26,7 @@
         <!-- endbuild -->
 
         <!-- Place your HTML imports here -->
+        <link rel="import" href="bower_components/polymer-elements/polymer-flex-layout/polymer-flex-layout.html">
         <link rel="import" href="bower_components/polymer-elements/polymer-ajax/polymer-xhr.html">
         <link rel="import" href="bower_components/polymer-elements/polymer-signals/polymer-signals.html">
         <link rel="import" href="bower_components/polymer-elements/polymer-localstorage/polymer-localstorage.html">
@@ -41,18 +42,30 @@
         <link rel="import" href="elements/ui/topic.html">
         <link rel="import" href="elements/ui/input.html">
     </head>
-    <body class="container-fluid" style="height: 100%">
-        <div class="col-sm-2" style="height: 100%; border-right: 1px solid black; padding: 1em">
-            <windows-element></windows-element>
-            <hr>
-            <nicklist-element></nicklist-element>
-            <hr>
-            <settings-element></settings-element>
+    <body>
+        <polymer-flex-layout></polymer-flex-layout>
+        <div class="sidebar">
+            <div class="tabs btn-group">
+              <button type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-th-large"></span></button>
+              <button type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-th-list"></span></button>
+              <button type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-wrench"></span></button>
+            </div>
+            <div class="content">
+                <polymer-flex-layout vertical></polymer-flex-layout>
+                <windows-element flex></windows-element>
+                <nicklist-element></nicklist-element>
+                <settings-element></settings-element>
+            </div>
+
         </div>
-        <div class="col-sm-10" style="height: 100%">
-            <topic-element></topic-element>
-            <lines-element style="height: 500px"></lines-element>
-            <input-element></input-element>
+        <div class="main" flex>
+            <polymer-flex-layout vertical></polymer-flex-layout>
+            <topic-element class="topic"></topic-element>
+            <lines-element class="lines" flex></lines-element>
+            <input-element class="input"></input-element>
         </div>
     </body>
 </html>

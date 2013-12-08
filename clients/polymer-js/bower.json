@@ -4,8 +4,10 @@
   "dependencies": {
     "bootstrap": "~3.0.2",
     "modernizr": "~2.6.2",
+	"crypto-js": "http://crypto-js.googlecode.com/files/CryptoJS%20v3.1.2.zip",
     "polymer": "latest",
-	"crypto-js": "http://crypto-js.googlecode.com/files/CryptoJS%20v3.1.2.zip"
+    "polymer-elements": "latest",
+    "polymer-ui-elements": "latest"
   },
   "devDependencies": {}
 }
