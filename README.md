@@ -1,121 +1,44 @@
-irssi remote client (IRC)
-irssi-rest-api
-==============
+Irssi Remote Client (IRC)
+=========================
 
-Plugin and clients for remotely operating irssi.
+Script and clients for remotely operating Irssi.
 
-Extending the idea of the irssi-notify script to enable two-way communication and interaction. This is like an combination of irssi-connectbot and irssi-notify, the idea is to make it as easy as possible to operate irc from mobile hardware platforms.
+The script is a HTTP server running inside Irssi and listens for commands. Most of the internal complexity of Irssi is hidden by the script, and the functionality is exposed via a simplified interface.
 
-The irssi-script listens to a TCP port or pipe or fifo file or something and provides an API for clients connecting to the script. Over the API the client can fetch information on windows and their content, as well as send commands to irssi.
-
-At the moment the client listens HTTP requests on port 10000, and reacts to the following commands:
-
-The client interface can be tested with static data at client-js/?url=test_data/
+The clients can be anything with an internet connection and talks HTTP. Currently there is only an JavaScript HTML5 application that exposes a chat interface.
 
 
+Installing
+----------
 
-JSON-RPC API
-------------
+ 1. Install script and dependencies (for more information check the script readme):
+  * `cpan Try::Tiny JSON::RPC::Common Digest::SHA`
+  * `curl -o ~/.irssi/scripts/remote-client.pl https://raw.github.com/aeirola/irssi-remote-client/master/irssi/remote-client.pl`
 
-JSON-RPC v2 protocol for controlling irssi
+ 2. Load script (in Irssi):
+  * `/script load remote-client`
+  * `/set remote_client_password $YOUR_PASSWORD`
+  * `/set remote_client_port $YOUR_PORT`
 
-
-### URLs:
-HTTP url: /http (POST)
-WebSocket url: /websocket
-
-
-### Methods:
-
---> { "method": "getWindows", "id": 1}
-<-- { "error": null, "id": 1, "result": 
-		{
-			1: {
-				"name": "#irssi",
-				"channel": "#irssi"
-			},
-			...
-		}
-	}
-
-
---> { "method": "getWindow", "params": {"windowId": 1}, "id": 1}
-<-- { "error": null, "id": 1, "result": 
-		{
-			"name": "#irssi",
-			"channel": "#irssi",
-			"nicks": [
-				{
-					"name": "Spaceball",
-					"mode": "op"|"voice"|null
-				},
-				...
-			]
-		}
-	}
-
-
---> { "method": "getWindowLines", "params": {"windowId": 1, "timestamp": "2013-10-24T17:04:12.12341"}, "id": 1}
-<-- { "error": null, "id": 1, "result": 
-		[
-			{
-				"timestamp": "2013-10-24T17:06:12.54326",
-				"text": "<Spaceball> Lol, i'm on irc"
-			},
-			...
-		]
-	}
-
-
---> { "method": "sendMessage": "params": {"windowId": 1, "message": "Lol, i'm on irc"}, "id": 1}
-<-- { "error": null", "id": 1, "result": 
-		{
-			"timestamp": "2013-10-24T17:10:45.12415",
-			"text": "lol, i'm on irc"
-		}
-	}
-
-
-Usage example
--------------
-* `/script load irssi-rest-api`
-* `curl -POST http://localhost:10000/http -d '{ "method": "getWindows", "id": 1}'`
-
-There is also an silly JS-client that uses the REST API, you need to specify the API base url as an url parameter, like `../client.html?url=http://localhost:10000`
-
-Requirements
-------------
-* Protocol::WebSocket for handling websocket connections
 
 Known issues
 ------------
-* Doesn't have much error handling
-
-TODO
-----
- * General
-  - Fix encoding
-
- * Script
-  - nick modes
-  - topic change
-  - general ui change polling
-
- * Client:
-  - Clean up tabbing code
-
+* Irssi script doesn't have much error handling, might crash
+* Limited functionality
 
 Future improvements
 -------------------
-* JSON-RPC support on WebSocket?
-* Cleaner API
-* More commands
+* UTF-8 encoding
+* JSON-RPC support on WebSocket
+* More command functionality
+ * Topics
+ * Channels
+ * Queries
+ * Hilights
+ * ...
 * Reconnection, pings, fault tolerance
+* Code cleanup
 
-Irssi documentation
--------------------
-* http://irssi.org/documentation: Official
-* https://github.com/shabble/irssi-docs: Unofficial
 
 Similar failed projects
 -----------------------

@@ -1,3 +1,7 @@
+`remote-client.pl` is the Irssi script that exposes the functionality of Irssi through a JSON-RPC interface delover over HTTP and WebSockets.
+
+The interface is unencrypted by itself, so it is adviced to route the connections through an HTTPS endpoint.
+
 Installing
 ----------
 
@@ -8,20 +12,19 @@ The script depends on the following CPAN packages:
  * JSON::RPC::Common
  * Digest::SHA
 
-
-If you have root:
+#### If you have root:
  * Just install the packages `cpan Try::Tiny JSON::RPC::Common Digest::SHA`
 
-If you dont have root:
+#### If you don't have root:
  * Install cpanminus: `curl -L http://cpanmin.us | perl - App::cpanminus`
  * Install locallib: `$HOME/perl5/bin/cpanm -n --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)`
  * Install dependencies: `$HOME/perl5/bin/cpanm -n Moose JSON::RPC::Common Try::Tiny Digest::SHA`
- * Add local perl path to bash env `echo 'eval $(perl -I$HOME/perl5/lib/perl5 -Mlocal::lib)' >> ~/.bash_profile`
- * Set local perl path for running irssi instance `/script exec push(@INC, "$ENV{'HOME'}/perl5/lib/perl5")`
+ * Add local Perl path to profile `echo 'export PERL5LIB="$HOME/perl5/lib/perl5:"' >> ~/.profile`
+ * Set local Perl path for running irssi instance `/script exec push(@INC, "$ENV{'HOME'}/perl5/lib/perl5")`
 
 ### Installing the script
  * Create directories: `mkdir -p ~/.irssi/scripts/autorun/`
- * Download script: `curl -o ~/.irssi/scripts/remote-client.pl https://raw.github.com/aeirola/irssi-rest-api/master/irssi/remote-client.pl`
+ * Download script: `curl -o ~/.irssi/scripts/remote-client.pl https://raw.github.com/aeirola/irssi-remote-client/master/irssi/remote-client.pl`
  * (Optional) Set autorun: `ln -s ../remote-client.pl ~/.irssi/scripts/autorun/`
  * Load script (in Irssi): `/script load remote-client`
 
@@ -99,6 +102,11 @@ WebSocket url: /json-rpc/websocket (reserved, not in use)
 * `curl -POST http://localhost:10000/http -d '{ "method": "getWindows", "id": 1}'`
 
 
+Irssi documentation resources
+-----------------------------
+* http://irssi.org/documentation: Official
+* https://github.com/shabble/irssi-docs: Unofficial
+
 
 Testing
 -------
@@ -115,7 +123,7 @@ Tests use mocked versions of the Irssi perl interfaces. These interfaces are not
 
 Future improvements
 -------------------
-
+ - Check what happens to listeners and timeouts on connection close
  - Fix test threading so that connection keep-alive will be used
  - OOO Modular structure: commands, tcp handling, http handling, websocket handling, rpc handling
  - Correct JSON-RPC response codes
