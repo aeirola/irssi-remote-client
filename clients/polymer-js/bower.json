@@ -3,11 +3,9 @@
   "version": "0.0.0",
   "dependencies": {
     "bootstrap": "~3.0.2",
-    "modernizr": "~2.6.2",
-	"crypto-js": "http://crypto-js.googlecode.com/files/CryptoJS%20v3.1.2.zip",
+  	"crypto-js": "http://crypto-js.googlecode.com/files/CryptoJS%20v3.1.2.zip",
     "polymer": "latest",
-    "polymer-elements": "latest",
-    "polymer-ui-elements": "latest"
+    "polymer-elements": "latest"
   },
   "devDependencies": {}
 }

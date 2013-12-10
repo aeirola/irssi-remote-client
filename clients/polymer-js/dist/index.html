@@ -1,0 +1,1331 @@
+<!doctype html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Irssi remote client</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width">
+
+        <link rel="stylesheet" href="styles/style.css">
+
+        <script src="scripts/script.js"></script>
+
+        <!-- Place your HTML imports here -->
+        
+        
+        
+        
+
+        
+
+        
+        
+
+        
+        
+        
+
+        
+        
+        
+    </head>
+    <body><!--
+Copyright 2013 The Polymer Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+-->
+<!--
+/**
+ * @module Polymer Elements
+ */
+/**
+ * polymer-xhr can be used to perform XMLHttpRequests.
+ 
+ * Example:
+ *
+ *     <polymer-xhr id="xhr"></polymer-xhr>
+ *     ...
+ *     this.$.xhr.request({url: url, params: params, callback: callback});
+ *
+ * @class polymer-xhr
+ */
+-->
+<polymer-element name="polymer-xhr" assetpath="../app/bower_components/polymer-elements/polymer-ajax/">
+  <template>
+    <style>
+      @host {
+        * {
+          display: none;
+        }
+      }
+    </style>
+  </template>
+  <script>
+    Polymer('polymer-xhr', {
+      makeReadyStateHandler: function(xhr, callback) {
+        xhr.onreadystatechange = function() {
+          if (xhr.readyState == 4) {
+            callback && callback.call(null, xhr.response, xhr);
+          }
+        };
+      },
+      setRequestHeaders: function(xhr, headers) {
+        if (headers) {
+          for (var name in headers) {
+            xhr.setRequestHeader(name, headers[name]);
+          }
+        }
+      },
+      toQueryString: function(params) {
+        var r = [];
+        for (var n in params) {
+          var v = params[n];
+          n = encodeURIComponent(n);
+          r.push(v == null ? n : (n + '=' + encodeURIComponent(v)));
+        }
+        return r.join('&');
+      },
+      /**
+       * Sends a HTTP request to the server and returns the XHR object.
+       *
+       * @method request
+       * @param {Object} inOptions
+       *    @param {String} inOptions.url The url to which the request is sent.
+       *    @param {String} inOptions.method The HTTP method to use, default is GET.
+       *    @param {boolean} inOptions.sync By default, all requests are sent asynchronously.
+       *        To send synchronous requests, set to true.
+       *    @param {Object} inOptions.params Data to be sent to the server.
+       *    @param {Object} inOptions.body The content for the request body for POST method.
+       *    @param {Object} inOptions.headers HTTP request headers.
+       *    @param {String} inOptions.responseType The response type. Default is 'text'.
+       *    @param {Object} inOptions.callback Called when request is completed.
+       * @returns {Object} XHR object.
+       */
+      request: function(options) {
+        var xhr = new XMLHttpRequest();
+        var url = options.url;
+        var method = options.method || 'GET';
+        var async = !options.sync;
+        var params = this.toQueryString(options.params);
+        if (params && method == 'GET') {
+          url += (url.indexOf('?') > 0 ? '&' : '?') + params;
+        }
+        xhr.open(method, url, async);
+        if (options.responseType) {
+          xhr.responseType = options.responseType;
+        }
+        this.makeReadyStateHandler(xhr, options.callback);
+        this.setRequestHeaders(xhr, options.headers);
+        xhr.send(method == 'POST' ? (options.body || params) : null);
+        if (!async) {
+          xhr.onreadystatechange(xhr);
+        }
+        return xhr;
+      }
+    });
+  </script>
+</polymer-element>
+
+<!--
+Copyright 2013 The Polymer Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+-->
+<polymer-element name="polymer-signals" assetpath="../app/bower_components/polymer-elements/polymer-signals/">
+  <script>
+    (function(){
+      Polymer('polymer-signals', {
+        enteredView: function() {
+          signals.push(this);
+        },
+        removed: function() {
+          var i = signals.indexOf(this);
+          if (i >= 0) {
+            signals.splice(i, 1);
+          }
+        }
+      });
+      // private shared database
+      var signals = [];
+      // signal dispatcher
+      function notify(name, data) {
+        // convert generic-signal event to named-signal event
+        var signal = new CustomEvent('polymer-signal-' + name, {
+          bubbles: true,
+          detail: data
+        });
+        // dispatch named-signal to all 'signals' instances,
+        // only interested listeners will react
+        signals.forEach(function(s) {
+          s.dispatchEvent(signal);
+        });
+      }
+      // signal listener at document
+      document.addEventListener('polymer-signal', function(e) {
+        notify(e.detail.name, e.detail.data);
+      });
+    })();
+  </script>
+</polymer-element>
+
+<!--
+Copyright 2013 The Polymer Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+-->
+<!--
+/**
+ * @module Polymer Elements
+ */
+/**
+ * polymer-localstorage provides access to localStorage.  The "name" property
+ * is the key to the data ("value" property) stored in localStorage.
+ *
+ * polymer-localstorage automatically saves the value to localStorage when
+ * value is changed.  Note that if value is an object auto-save will be
+ * triggered only when value is a different instance.
+ *
+ * Example:
+ *
+ *     <polymer-localstorage name="my-app-storage" value="{{value}}"></polymer-localstorage>
+ *
+ * @class polymer-localstorage
+ */
+/**
+ * Fired after it is loaded from localStorage.
+ * 
+ * @event polymer-localstorage-load
+ */
+-->
+<polymer-element name="polymer-localstorage" attributes="name value useRaw autoSaveDisabled" assetpath="../app/bower_components/polymer-elements/polymer-localstorage/">
+  <template>
+    <style>
+      @host {
+        * {
+          display: none;
+        }
+      }
+    </style>
+  </template>
+  <script>
+    Polymer('polymer-localstorage', {
+      /**
+       * The key to the data stored in localStorage.
+       *
+       * @attribute name
+       * @type string
+       * @default null
+       */
+      name: '',
+      /**
+       * The data associated with the specified name.
+       *
+       * @attribute value
+       * @type object
+       * @default null
+       */
+      value: null,
+      /**
+       * If true, the value is stored and retrieved without JSON processing.
+       *
+       * @attribute useRaw
+       * @type boolean
+       * @default false
+       */
+      useRaw: false,
+      /**
+       * If true, auto save is disabled.
+       *
+       * @attribute autoSaveDisabled
+       * @type boolean
+       * @default false
+       */
+      autoSaveDisabled: false,
+      enteredView: function() {
+        // wait for bindings are all setup
+        this.async('load');
+      },
+      valueChanged: function() {
+        if (this.loaded && !this.autoSaveDisabled) {
+          this.save();
+        }
+      },
+      load: function() {
+        var s = window.localStorage.getItem(this.name);
+        if (s !== null && !this.useRaw) {
+          try {
+            this.value = JSON.parse(s);
+          } catch (x) {
+            this.value = s;
+          }
+        } else {
+          this.value = s;
+        }
+        this.loaded = true;
+        this.asyncFire('polymer-localstorage-load');
+      },
+      /** 
+       * Saves the value to localStorage.
+       *
+       * @method save
+       */
+      save: function() {
+        window.localStorage.setItem(this.name, 
+            this.useRaw ? this.value : JSON.stringify(this.value));
+      }
+    });
+  </script>
+</polymer-element>
+
+<!--
+Copyright 2013 The Polymer Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+-->
+<!--
+/**
+ * @module Polymer Elements
+ */
+/**
+ * polymer-flex-layout provides a helper to use CSS3 Flexible Boxes.  By putting
+ * polymer-flex-layout inside an element it makes the element a flex
+ * container. Use 'flex' attribute to make the flex item flexible.
+ *
+ * Example:
+ *
+ *     <div>
+ *       <polymer-flex-layout></polymer-flex-layout>
+ *       <div>Left</div>
+ *       <div flex>Main</div>
+ *       <div>Right</div>
+ *     </div>
+ *
+ *     ---------------------------------
+ *     |-------------------------------|
+ *     ||Left|       Main       |Right||
+ *     |-------------------------------|
+ *     ---------------------------------
+ *
+ *     <div>
+ *       <polymer-flex-layout vertical></polymer-flex-layout>
+ *       <div>Header</div>
+ *       <div flex>Body</div>
+ *       <div>Footer</div>
+ *     </div>
+ *
+ *     ----------
+ *     ||------||
+ *     ||Header||
+ *     ||------||
+ *     ||Body  ||
+ *     ||      ||
+ *     ||      ||
+ *     ||      ||
+ *     ||      ||
+ *     ||      ||
+ *     ||      ||
+ *     ||------||
+ *     ||Footer||
+ *     ||------||
+ *     ----------
+ *
+ * @class polymer-flex-layout
+ */
+/**
+ * If true, flex items are aligned vertically.
+ *
+ * @attribute vertical
+ * @type boolean
+ * @default false
+ */
+/**
+ * Defines the default for how flex items are laid out along the cross axis on 
+ * the current line.  Possible values are 'start', 'center' and 'end'.
+ *
+ * @attribute align
+ * @type string
+ * @default ''
+ */
+/**
+ * Defines how flex items are laid out along the main axis on the current line.
+ * Possible values are 'start', 'center' and 'end'.
+ *
+ * @attribute justify
+ * @type string
+ * @default ''
+ */
+/**
+ * If true, polymer-flex-layout is the flex container.
+ *
+ * Example:
+ *
+ *     <polymer-flex-layout isContainer>
+ *       <div>Left</div>
+ *       <div flex>Main</div>
+ *       <div>Right</div>
+ *     </polymer-flex-layout>
+ *
+ *     ---------------------------------
+ *     |-------------------------------|
+ *     ||Left|       Main       |Right||
+ *     |-------------------------------|
+ *     ---------------------------------
+ *
+ * @attribute isContainer
+ * @type boolean
+ * @default false
+ */
+-->
+<polymer-element name="polymer-flex-layout" attributes="vertical align justify isContainer" assetpath="../app/bower_components/polymer-elements/polymer-flex-layout/">
+  <template>
+    <style polymer-scope="controller">/*
+Copyright 2013 The Polymer Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+*/
+.flexbox, [flexbox], [h-flexbox], [v-flexbox] {
+  display: -webkit-box !important;
+  display: -ms-flexbox !important;
+  display: -moz-flex !important;
+  display: -webkit-flex !important;
+  display: flex !important;
+}
+
+.flexbox.row, [flexbox], [h-flexbox] {
+  -webkit-box-orient: horizontal;
+  -ms-flex-direction: row;
+  -moz-flex-direction: row;
+  -webkit-flex-direction: row;
+  flex-direction: row;
+}
+
+.flexbox.column, [v-flexbox] {
+  -webkit-box-orient: vertical;
+  -ms-flex-direction: column;
+  -moz-flex-direction: column;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
+
+.flex, [flex], [fit] {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  -moz-flex: 1;
+  -webkit-flex: 1;
+  flex: 1;
+}
+
+::-webkit-distributed(.flex), 
+::-webkit-distributed([flex]),
+::-webkit-distributed([fit]) {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  -moz-flex: 1;
+  -webkit-flex: 1;
+  flex: 1;
+}
+
+.flexbox.align-start {
+  -webkit-box-align: start;
+  -ms-flex-align: start;
+  -moz-align-items: flex-start;
+  -webkit-align-items: flex-start;
+  align-items: flex-start;
+}
+
+.flexbox.align-end {
+  -webkit-box-align: end;
+  -ms-flex-align: end;
+  -moz-align-items: flex-end;
+  -webkit-align-items: flex-end;
+  align-items: flex-end;
+}
+
+.flexbox.align-center {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  -moz-align-items: center;
+  -webkit-align-items: center;
+  align-items: center;
+}
+
+.flexbox.justify-start {
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  -moz-justify-content: flex-start;
+  -webkit-justify-content: flex-start;
+  justify-content: flex-start;
+}
+
+.flexbox.justify-end {
+  -webkit-box-pack: end;
+  -ms-flex-pack: end;
+  -moz-justify-content: flex-end;
+  -webkit-justify-content: flex-end;
+  justify-content: flex-end;
+}
+
+.flexbox.justify-center {
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  -moz-justify-content: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+
+.flexbox.justify-between {
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  -moz-justify-content: space-between;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
+}
+
+@host {
+  .flexbox, [flexbox], [h-flexbox], [v-flexbox] {
+    display: -webkit-box !important;
+    display: -ms-flexbox !important;
+    display: -moz-flex !important;
+    display: -webkit-flex !important;
+    display: flex !important;
+  }
+  
+  .flexbox.row, [flexbox], [h-flexbox] {
+    -webkit-box-orient: horizontal;
+    -ms-flex-direction: row;
+    -moz-flex-direction: row;
+    -webkit-flex-direction: row;
+    flex-direction: row;
+  }
+  
+  .flexbox.column, [v-flexbox] {
+    -webkit-box-orient: vertical;
+    -ms-flex-direction: column;
+    -moz-flex-direction: column;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+  }
+  
+  .flexbox.align-start {
+    -webkit-box-align: start;
+    -ms-flex-align: start;
+    -moz-align-items: flex-start;
+    -webkit-align-items: flex-start;
+    align-items: flex-start;
+  }
+  
+  .flexbox.align-end {
+    -webkit-box-align: end;
+    -ms-flex-align: end;
+    -moz-align-items: flex-end;
+    -webkit-align-items: flex-end;
+    align-items: flex-end;
+  }
+  
+  .flexbox.align-center {
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    -moz-align-items: center;
+    -webkit-align-items: center;
+    align-items: center;
+  }
+  
+  .flexbox.justify-start {
+    -webkit-box-pack: start;
+    -ms-flex-pack: start;
+    -moz-justify-content: flex-start;
+    -webkit-justify-content: flex-start;
+    justify-content: flex-start;
+  }
+  
+  .flexbox.justify-end {
+    -webkit-box-pack: end;
+    -ms-flex-pack: end;
+    -moz-justify-content: flex-end;
+    -webkit-justify-content: flex-end;
+    justify-content: flex-end;
+  }
+  
+  .flexbox.justify-center {
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    -moz-justify-content: center;
+    -webkit-justify-content: center;
+    justify-content: center;
+  }
+  
+  .flexbox.justify-between {
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    -moz-justify-content: space-between;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+  }
+}
+</style>
+    <style>/*
+Copyright 2013 The Polymer Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+*/
+.flexbox, [flexbox], [h-flexbox], [v-flexbox] {
+  display: -webkit-box !important;
+  display: -ms-flexbox !important;
+  display: -moz-flex !important;
+  display: -webkit-flex !important;
+  display: flex !important;
+}
+
+.flexbox.row, [flexbox], [h-flexbox] {
+  -webkit-box-orient: horizontal;
+  -ms-flex-direction: row;
+  -moz-flex-direction: row;
+  -webkit-flex-direction: row;
+  flex-direction: row;
+}
+
+.flexbox.column, [v-flexbox] {
+  -webkit-box-orient: vertical;
+  -ms-flex-direction: column;
+  -moz-flex-direction: column;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
+
+.flex, [flex], [fit] {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  -moz-flex: 1;
+  -webkit-flex: 1;
+  flex: 1;
+}
+
+::-webkit-distributed(.flex), 
+::-webkit-distributed([flex]),
+::-webkit-distributed([fit]) {
+  -webkit-box-flex: 1;
+  -ms-flex: 1;
+  -moz-flex: 1;
+  -webkit-flex: 1;
+  flex: 1;
+}
+
+.flexbox.align-start {
+  -webkit-box-align: start;
+  -ms-flex-align: start;
+  -moz-align-items: flex-start;
+  -webkit-align-items: flex-start;
+  align-items: flex-start;
+}
+
+.flexbox.align-end {
+  -webkit-box-align: end;
+  -ms-flex-align: end;
+  -moz-align-items: flex-end;
+  -webkit-align-items: flex-end;
+  align-items: flex-end;
+}
+
+.flexbox.align-center {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  -moz-align-items: center;
+  -webkit-align-items: center;
+  align-items: center;
+}
+
+.flexbox.justify-start {
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  -moz-justify-content: flex-start;
+  -webkit-justify-content: flex-start;
+  justify-content: flex-start;
+}
+
+.flexbox.justify-end {
+  -webkit-box-pack: end;
+  -ms-flex-pack: end;
+  -moz-justify-content: flex-end;
+  -webkit-justify-content: flex-end;
+  justify-content: flex-end;
+}
+
+.flexbox.justify-center {
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  -moz-justify-content: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+
+.flexbox.justify-between {
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  -moz-justify-content: space-between;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
+}
+
+@host {
+  .flexbox, [flexbox], [h-flexbox], [v-flexbox] {
+    display: -webkit-box !important;
+    display: -ms-flexbox !important;
+    display: -moz-flex !important;
+    display: -webkit-flex !important;
+    display: flex !important;
+  }
+  
+  .flexbox.row, [flexbox], [h-flexbox] {
+    -webkit-box-orient: horizontal;
+    -ms-flex-direction: row;
+    -moz-flex-direction: row;
+    -webkit-flex-direction: row;
+    flex-direction: row;
+  }
+  
+  .flexbox.column, [v-flexbox] {
+    -webkit-box-orient: vertical;
+    -ms-flex-direction: column;
+    -moz-flex-direction: column;
+    -webkit-flex-direction: column;
+    flex-direction: column;
+  }
+  
+  .flexbox.align-start {
+    -webkit-box-align: start;
+    -ms-flex-align: start;
+    -moz-align-items: flex-start;
+    -webkit-align-items: flex-start;
+    align-items: flex-start;
+  }
+  
+  .flexbox.align-end {
+    -webkit-box-align: end;
+    -ms-flex-align: end;
+    -moz-align-items: flex-end;
+    -webkit-align-items: flex-end;
+    align-items: flex-end;
+  }
+  
+  .flexbox.align-center {
+    -webkit-box-align: center;
+    -ms-flex-align: center;
+    -moz-align-items: center;
+    -webkit-align-items: center;
+    align-items: center;
+  }
+  
+  .flexbox.justify-start {
+    -webkit-box-pack: start;
+    -ms-flex-pack: start;
+    -moz-justify-content: flex-start;
+    -webkit-justify-content: flex-start;
+    justify-content: flex-start;
+  }
+  
+  .flexbox.justify-end {
+    -webkit-box-pack: end;
+    -ms-flex-pack: end;
+    -moz-justify-content: flex-end;
+    -webkit-justify-content: flex-end;
+    justify-content: flex-end;
+  }
+  
+  .flexbox.justify-center {
+    -webkit-box-pack: center;
+    -ms-flex-pack: center;
+    -moz-justify-content: center;
+    -webkit-justify-content: center;
+    justify-content: center;
+  }
+  
+  .flexbox.justify-between {
+    -webkit-box-pack: justify;
+    -ms-flex-pack: justify;
+    -moz-justify-content: space-between;
+    -webkit-justify-content: space-between;
+    justify-content: space-between;
+  }
+}
+</style>
+    <content></content>
+  </template>
+  <script>
+    Polymer('polymer-flex-layout', {
+      vertical: false,
+      isContainer: false,
+      layoutContainer: null,
+      enteredView: function() {
+        this.installControllerStyles();
+        this.layoutContainer = this.isContainer ? 
+            this : (this.parentNode.host || this.parentNode);
+        this.verticalChanged();
+        this.alignChanged();
+        this.justifyChanged();
+      },
+      leftView: function() {
+        this.layoutContainer = null;
+      },
+      layoutContainerChanged: function(old) {
+        if (old) {
+          old.classList.remove('flexbox');
+        }
+        this.style.display = this.layoutContainer === this ? '' : 'none';
+        if (this.layoutContainer) {
+          this.layoutContainer.classList.add('flexbox');
+        }
+      },
+      switchContainerClass: function(prefix, old, name) {
+        if (this.layoutContainer && name) {
+          this.layoutContainer.classList.switch(
+              prefix + old, prefix + name);
+        }
+      },
+      verticalChanged: function() {
+        if (this.layoutContainer) {
+          this.layoutContainer.classList.toggle('column', this.vertical);
+        }
+      },
+      alignChanged: function(old) {
+        this.switchContainerClass('align-', old, this.align);
+      },
+      justifyChanged: function(old) {
+        this.switchContainerClass('justify-', old, this.justify);
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="remote-client-element" assetpath="../app/elements/">
+  <template>
+    <style>
+      @host { :scope {display: block;} }
+    </style>
+
+    <polymer-flex-layout></polymer-flex-layout>
+    <div id="sidebar" class="sidebar {{showSidebar ? &apos;show&apos; : &apos;hidden&apos;}}">
+        <div class="tabs btn-group">
+          <button type="button" class="btn btn-default {{sidebarTab == &apos;windows&apos; ? &apos;active&apos; : &apos;&apos;}}" on-click="{{setSidebarTab}}" data-tab="windows">
+            <span class="glyphicon glyphicon-th-large"></span></button>
+
+          <button type="button" class="btn btn-default {{sidebarTab == &apos;nicks&apos; ? &apos;active&apos; : &apos;&apos;}}" on-click="{{setSidebarTab}}" data-tab="nicks">
+            <span class="glyphicon glyphicon-th-list"></span></button>
+
+          <button type="button" class="btn btn-default {{sidebarTab == &apos;settings&apos; ? &apos;active&apos; : &apos;&apos;}}" on-click="{{setSidebarTab}}" data-tab="settings">
+            <span class="glyphicon glyphicon-wrench"></span></button>
+        </div>
+
+        <div class="content">
+            <windows-element class="{{sidebarTab == &apos;windows&apos; ? &apos;show&apos; : &apos;hidden&apos;}}"></windows-element>
+            <nicklist-element class="{{sidebarTab == &apos;nicks&apos; ? &apos;show&apos; : &apos;hidden&apos;}}"></nicklist-element>
+            <settings-element class="{{sidebarTab == &apos;settings&apos; ? &apos;show&apos; : &apos;hidden&apos;}}"></settings-element>
+        </div>
+    </div>
+    <div class="main" flex="">
+        <polymer-flex-layout vertical=""></polymer-flex-layout>
+        <div class="header">
+          <polymer-flex-layout></polymer-flex-layout>
+          <button on-click="{{toggleSidebar}}" class="btn btn-primary">
+            <span class="glyphicon glyphicon-chevron-{{showSidebar ? &apos;left&apos; : &apos;right&apos;}}"></span></button>
+          <topic-element class="topic" flex=""></topic-element>
+        </div>
+        <lines-element class="lines" flex=""></lines-element>
+        <input-element class="input"></input-element>
+    </div>
+
+    <polymer-signals on-polymer-signal-not-configured="{{notConfiguredSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('remote-client-element', {
+      showSidebar: true,
+      sidebarTab: 'windows',
+      notConfiguredSignal: function notConfiguredSignal() {
+        this.showSidebar = true;
+        this.sidebarTab = 'settings';
+      },
+      toggleSidebar: function toggleSidebar() {
+        this.showSidebar = !this.showSidebar;
+      },
+      setSidebarTab: function setSidebarTab(_, _, target) {
+        this.sidebarTab = target.attributes['data-tab'].value;
+      }
+    });
+  </script>
+</polymer-element>
+<!--
+Copyright 2013 The Polymer Authors. All rights reserved.
+Use of this source code is governed by a BSD-style
+license that can be found in the LICENSE file.
+-->
+<!--
+/**
+ * @module Polymer Elements
+ */
+/**
+ * json-rpc-element can be used to perform XMLHttpRequests.
+ *
+ * Example:
+ *
+ *     <json-rpc-element auto url="http://gdata.youtube.com/feeds/api/videos/" 
+ *         params='{"alt":"json", "q":"chrome"}'
+ *         handleAs="json"
+ *         on-polymer-response="{{handleResponse}}">
+ *     </json-rpc-element>
+ *
+ * @class json-rpc-element
+ */
+/**
+ * Fired when a response is received.
+ * 
+ * @event polymer-response
+ */
+/**
+ * Fired when an error is received.
+ * 
+ * @event polymer-error
+ */
+/**
+ * Fired whenever a response or an error is received.
+ *
+ * @event polymer-complete
+ */
+-->
+<polymer-element name="json-rpc-element" attributes="url auto method params response headers" assetpath="../app/elements/util/">
+  <script>
+    Polymer('json-rpc-element', {
+      /**
+       * The URL target of the request.
+       * 
+       * @attribute url
+       * @type string
+       * @default ''
+       */
+      url: '',
+      /**
+       * If true, automatically performs an Ajax request when either url or params has changed.
+       *
+       * @attribute auto
+       * @type boolean
+       * @default false
+       */
+      auto: false,
+      /**
+       * The JSON-RPC method to call
+       *
+       * @attribute method
+       * @type string
+       * @default ''
+       */
+      method: '',
+      /**
+       * Optional parameters for the JSON-RPC method
+       *  
+       * @attribute params
+       * @type string (JSON)
+       * @default ''
+       */
+      params: '',
+      /**
+       * Returns the response object.
+       *
+       * @attribute response
+       * @type Object
+       * @default null
+       */
+      response: null,
+      /**
+       * HTTP request headers to send.
+       *
+       * Example:
+       *
+       *     <polymer-ajax auto url="http://somesite.com"
+       *         headers='{"X-Requested-With": "XMLHttpRequest"}'
+       *         handleAs="json"
+       *         on-polymer-response="{{handleResponse}}">
+       *     </polymer-ajax>
+       *  
+       * @attribute headers
+       * @type Object
+       * @default null
+       */
+      request_id: 1,
+      headers: null,
+      ready: function() {
+        this.xhr = document.createElement('polymer-xhr');
+      },
+      receive: function(response, xhr) {
+        if (this.isSuccess(xhr)) {
+          this.processResponse(xhr);
+        } else {
+          this.error(xhr);
+        }
+        this.complete(xhr);
+      },
+      isSuccess: function(xhr) {
+        var status = xhr.status || 0;
+        return !status || (status >= 200 && status < 300);
+      },
+      processResponse: function(xhr) {
+        var response = this.evalResponse(xhr);
+        this.response = response;
+        this.fire('polymer-response', {response: response, xhr: xhr});
+      },
+      error: function(xhr) {
+        var response = xhr.status + ': ' + xhr.responseText;
+        this.fire('polymer-error', {response: response, xhr: xhr});
+      },
+      complete: function(xhr) {
+        this.fire('polymer-complete', {response: xhr.status, xhr: xhr});
+      },
+      evalResponse: function(xhr) {
+        var r = xhr.responseText;
+        try {
+          var response = JSON.parse(r);
+          // TODO: Add error checking
+          return response.result;
+        } catch (x) {
+          return r;
+        }
+      },
+      getId: function() {
+        return this.request_id++;
+      },
+      urlChanged: function() {
+        this.autoGo();
+      },
+      paramsChanged: function() {
+        this.autoGo();
+      },
+      autoChanged: function() {
+        this.autoGo();
+      },
+      // TODO(sorvell): multiple side-effects could call autoGo 
+      // during one micro-task, use a job to have only one action 
+      // occur
+      autoGo: function() {
+        if (this.auto) {
+          this.goJob = this.job(this.goJob, this.go, 0);
+        }
+      },
+      /**
+       * Performs an Ajax request to the url specified.
+       *
+       * @method go
+       */
+      go: function() {
+        var args = this.xhrArgs || {};
+        args.headers = this.headers || {};
+        if (args.headers && typeof(args.headers) == 'string') {
+          args.headers = JSON.parse(args.headers);
+        }
+        args.headers['Content-Type'] = 'application/json-rpc';
+        args.callback = this.receive.bind(this);
+        args.url = this.url;
+        args.method = 'POST';
+        var body = {
+          jsonrpc: '2.0',
+          method: this.method,
+          id: this.getId()
+        };
+        if (this.params) {
+          body.params = JSON.parse(this.params);
+        }
+        args.body = JSON.stringify(body);
+        return this.xhr.request(args);
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="irssi-rpc-element" attributes="auto method params refnum response" extends="json-rpc-element" assetpath="../app/elements/util/">
+  <template>
+    <polymer-signals on-polymer-signal-settings-changed="{{settingsChangedSignal}}"></polymer-signals>
+    <polymer-signals on-polymer-signal-window-refnum-changed="{{windowRefnumChangedSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('irssi-rpc-element', {
+    url: '',
+    refnum: false,
+    winRefnum: 0,
+    settingsTimeout: 300,
+    headers: {"Irssi-Authorization": ""},
+    windowRefnumChangedSignal: function windowRefnumChangedSignal(_, refnum) {
+      this.winRefnum = refnum;
+    },
+    settingsChangedSignal: function settingsChangedSignal(_, settings) {
+      this.url = settings.url + '/json-rpc';
+      this.headers['Irssi-Authorization'] = settings.password;
+    },
+    go: function go() {
+      if (this.refnum) {
+        var params = this.params ? JSON.parse(this.params) : {};
+        params.refnum = this.winRefnum;
+        this.params = JSON.stringify(params);
+      }
+      return this.super();
+    }
+  });
+  </script>
+</polymer-element>
+
+<polymer-element name="windows-element" assetpath="../app/elements/ui/">
+  <template>
+    <ul>
+      <template repeat="{{window in windows}}">
+        <li>
+          <a on-click="{{windowClicked}}" data-refnum="{{window.refnum}}">{{window.refnum}} {{window.name}}</a>
+        </li>
+      </template>
+    </ul>
+
+    <irssi-rpc-element id="windowsLoader" method="getWindows" response="{{windows}}"></irssi-rpc-element>
+    <irssi-rpc-element id="windowLoader" method="getWindow" refnum="" response="{{window}}" on-polymer-response="{{windowLoaded}}">
+    </irssi-rpc-element>
+
+    <polymer-signals on-polymer-signal-ready="{{readySignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('windows-element', {
+      refnum: 1,
+      readySignal: function readySignal() {
+        this.fire('polymer-signal', {name: 'window-refnum-changed', data: 1});
+        this.async(function() {
+          this.$.windowsLoader.go();
+          this.$.windowLoader.go();
+        });
+      },
+      windowClicked: function windowClicked(_, _, target) {
+        this.refnum = parseInt(target.attributes['data-refnum'].value);
+        this.fire('polymer-signal', {name: 'window-refnum-changed', data: this.refnum});
+        this.async(function() {
+          this.$.windowLoader.go();
+        });
+      },
+      windowLoaded: function windowLoaded(_, detail) {
+        this.fire('polymer-signal', {name: 'window-changed', data: detail.response});
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="nicklist-element" assetpath="../app/elements/ui/">
+  <template>
+    <ul>
+      <template repeat="{{nick in nicks}}">
+        <li>{{nick}}</li>
+      </template>
+    </ul>
+
+    <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('nicklist-element', {
+      nicks: [],
+      windowChangedSignal: function windowChangedSignal(_, win) {
+        this.nicks = win.nicks || [];
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="settings-element" assetpath="../app/elements/ui/">
+  <template>
+    <form role="form" on-submit="{{save}}">
+      <div class="form-group">
+        <label for="url">Url</label>
+        <input id="url" class="form-control" type="url" value="{{url}}" placeholder="https://host:port/path">
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input id="password" class="form-control" type="password" placeholder="password">
+      </div>
+
+      <p class="help-block">
+        For instructions on how to set up the remote client script in Irssi,
+        checkout the <a href="https://github.com/aeirola/irssi-rest-api/blob/master/README.md" target="_blank">read-me</a>.
+      </p>
+
+      <button class="btn btn-default">Save</button>
+    </form>
+
+    <polymer-localstorage autosavedisabled="" id="urlStore" name="irssi-remote-client-url" value="{{url}}"></polymer-localstorage>
+    <polymer-localstorage autosavedisabled="" id="passwordStore" name="irssi-remote-client-password" value="{{password}}"></polymer-localstorage>
+  </template>
+  <script>
+    Polymer('settings-element', {
+      url: '',
+      password: '',
+      pollLength: 300,
+      ready: function ready(e) {
+        var ready = false;
+
+        this.addEventListener('polymer-localstorage-load', function() {
+          if (!ready) {
+            this.notify();
+            if (this.url) {
+              this.fire('polymer-signal', {name: 'ready'});
+            } else {
+              this.fire('polymer-signal', {name: 'not-configured'});
+            }
+            ready = true;
+          }
+        });
+      },
+      notify: function notify(event) {
+        var settings = {
+          url: this.url,
+          password: this.password,
+        };
+        this.fire('polymer-signal', {name: 'settings-changed', data: settings});
+      },
+      save: function save(event) {
+        event.preventDefault();
+
+        // Hash password
+        if (this.$.password.value) {
+          this.password = CryptoJS.SHA512(this.$.password.value).toString(CryptoJS.enc.Base64).replace(/=*/g, '');
+        }
+
+        // Store settings
+        this.$.urlStore.save();
+        this.$.passwordStore.save();
+
+        // Reload
+        window.location.reload();
+        // TODO: Notify watchers
+        //this.notify();
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="lines-element" assetpath="../app/elements/ui/">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+
+    <template repeat="{{line in lines}}">
+      <p>{{line.text}}</p>
+    </template>
+
+    <irssi-rpc-element id="longPolling" method="getWindowLines" params="{&quot;timestampLimit&quot;: {{lastTimestamp}}, &quot;timeout&quot;: 300}" refnum="" on-polymer-response="{{newLineLoaded}}">
+    </irssi-rpc-element>
+    <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('lines-element', {
+      lines: [],
+      rowLimit: 100,
+      lastTimestamp: 0,
+      pollRequest: null,
+      windowChangedSignal: function windowChangedSignal(_, win) {
+        this._setLines(win.lines);
+        this._poll();
+      },
+      newLineLoaded: function newLineLoaded(_, data) {
+        if (data.xhr.status != 200) {
+          // Error
+          return;
+        }
+
+        this._addLines(data.response);
+        this._poll();
+      },
+      _poll: function _poll() {
+        if (this.pollRequest) {
+          this.pollRequest.abort();
+        }
+
+        this.async(function() {
+          this.pollRequest = this.$.longPolling.go();
+        });
+      },
+      _setLines: function _setLines(lines) {
+        this.lines = [];
+        this._addLines(lines);
+      },
+      _addLines: function _addLines(lines) {
+        if (lines.length > 0) {
+          var lastLine = lines[lines.length-1];
+          this.lastTimestamp = lastLine.timestamp;
+          this.lines = this.lines.concat(lines);
+        }
+
+        this.async(function() {
+          this.scrollTop = this.scrollHeight;
+        });
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="topic-element" assetpath="../app/elements/ui/">
+  <template>
+    <style>
+      :host:scope {
+        display: block;
+      }
+    </style>
+
+    <p>
+      {{name}} {{topic}}
+    </p>
+
+    <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
+  </template>
+  <script>
+    Polymer('topic-element', {
+      name: '',
+      topic: '',
+      windowChangedSignal: function windowChangedSignal(_, win) {
+        this.topic = win.topic || '';
+        this.name = win.name || '';
+      }
+    });
+  </script>
+</polymer-element>
+
+<polymer-element name="input-element" assetpath="../app/elements/ui/">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+    </style>
+    <p>
+      <form on-submit="{{sendLine}}">
+        <polymer-flex-layout></polymer-flex-layout>
+        <input id="line" name="line" type="text" autocomplete="off" autofocus="" spellcheck="true" class="form-control" flex="">
+        <button class="btn btn-primary"><span class="glyphicon glyphicon-arrow-right"></span></button>
+      </form>
+    </p>
+
+    <irssi-rpc-element renfum="" id="rpc" method="sendMessage" params="{&quot;message&quot;: &quot;{{line}}&quot;}" refnum="" response="{{lines}}" on-polymer-response="{{linesLoaded}}">
+    </irssi-rpc-element>
+  </template>
+  <script>
+    Polymer('input-element', {
+      line: '',
+      sendLine: function sendLine(e) {
+        e.preventDefault();
+        this.line = this.$.line.value;
+        this.$.line.value = "";
+
+        this.async(function() {
+          this.$.rpc.go();
+        });
+      }
+    });
+  </script>
+</polymer-element>
+
+        <remote-client-element></remote-client-element>
+    </body>
+</html>

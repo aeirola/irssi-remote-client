@@ -18,7 +18,7 @@ module.exports = function (grunt) {
 
     // configurable paths
     var yeomanConfig = {
-        app: 'app',
+        app: require('./bower.json').appPath || 'app',
         dist: 'dist'
     };
 
@@ -133,16 +133,6 @@ module.exports = function (grunt) {
                 }]
             }
         },
-        cssmin: {
-            dist: {
-                files: {
-                    '<%= yeoman.dist %>/styles/main.css': [
-                        '.tmp/styles/{,*/}*.css',
-                        '<%= yeoman.app %>/styles/{,*/}*.css'
-                    ]
-                }
-            }
-        },
         htmlmin: {
             dist: {
                 options: {
@@ -158,6 +148,19 @@ module.exports = function (grunt) {
                 },
                 files: [{
                     expand: true,
+                    cwd: '<%= yeoman.dist %>',
+                    src: 'index.html',
+                    dest: '<%= yeoman.dist %>'
+                }]
+            }
+        },
+        vulcanize: {
+            options: {
+
+            },
+            dist: {
+                files: [{
+                    expand: true,
                     cwd: '<%= yeoman.app %>',
                     src: '*.html',
                     dest: '<%= yeoman.dist %>'
@@ -168,16 +171,9 @@ module.exports = function (grunt) {
             dist: {
                 files: [{
                     expand: true,
-                    dot: true,
-                    cwd: '<%= yeoman.app %>',
-                    dest: '<%= yeoman.dist %>',
-                    src: [
-                        '*.{ico,txt}',
-                        '.htaccess',
-                        'elements/**',
-                        'lib-elements/**',
-                        'images/{,*/}*.{webp,gif}'
-                    ]
+                    cwd: '<%= yeoman.app %>/bower_components/bootstrap/dist/',
+                    src: '**/*.woff',
+                    dest: '<%= yeoman.dist %>'
                 }]
             }
         },
@@ -196,7 +192,6 @@ module.exports = function (grunt) {
 
         grunt.task.run([
             'clean:server',
-            
             'connect:livereload',
             'copy',
             'open',
@@ -206,17 +201,15 @@ module.exports = function (grunt) {
 
     grunt.registerTask('test', [
         'clean:server',
-        
-        
         'connect:test',
         'mocha'
     ]);
 
     grunt.registerTask('build', [
         'clean:dist',
-        
         'useminPrepare',
         'imagemin',
+        'vulcanize',
         'htmlmin',
         'concat',
         'cssmin',
