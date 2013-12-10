@@ -6,11 +6,13 @@ html, body, remote-client-element {
 }
 
 .sidebar {
-	overflow-x: auto;
+	overflow-y: auto;
+	overflow-x: hidden;
 	padding: 0.5em;
 	margin-right: 0.5em;
 	background-color: #EEE;
 	border-right: 1px dashed black;
+
 }
 
 .sidebar ul {
@@ -40,10 +42,13 @@ html, body, remote-client-element {
 topic-element {
 	margin: 0.5em 0 0 0.5em;
 	font-family: monospace;
+	overflow: hidden;
+	max-height: 3em;
 }
 
 lines-element {
-	overflow-x: scroll;
+	overflow-y: auto;
+	overflow-x: hidden;
 	border-bottom: 1px solid black;
 	border-top: 1px solid black;
 }
