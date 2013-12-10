@@ -23,8 +23,10 @@ Installing
 
 Known issues
 ------------
-* Irssi script doesn't have much error handling, might crash
+* Irssi script doesn't have much error handling, might crash randomly
 * Limited functionality
+* Non-ASCII characters don't render in client
+* Long lines and topics break layout flow
 
 Future improvements
 -------------------
