@@ -1,6 +1,7 @@
 # irssi-client-api.pl -- enables remote control of irssi
 
 use strict;
+use utf8;
 
 use Irssi;          # Interfacing with irssi
 
@@ -101,7 +102,7 @@ Class containing all the methods made available through the JSON-RPC API
 package Irssi::JSON::RPC::Commander;
 
 use Irssi::TextUI;  # Enable access to scrollback history, Irssi::UI::Window->view is defined here!
-use POSIX qw(modf);
+use Encode;
 
 
 =pod
@@ -252,7 +253,7 @@ sub getWindowLines {
 
 		push(@linesArray, {
 			'timestamp' => $timestamp + ($subsec_index/$SUBEC_RESOLUTION),
-			'text' => $ptr->get_text(0),
+			'text' => Encode::decode('utf8', $ptr->get_text(0)),
 		});
 		$ptr = $ptr->next();
 		$subsec_index++;

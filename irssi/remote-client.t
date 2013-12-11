@@ -1,6 +1,7 @@
 use diagnostics;
 use warnings;
 use strict;
+use utf8;
 
 use threads;
 use Test::More;
@@ -9,6 +10,7 @@ use Data::Dumper; # dbug prints
 use LWP::UserAgent;
 use JSON;
 use Digest::SHA qw(sha512_base64);
+use Encode;
 
 # Mock some stuff
 use lib './mock';
@@ -93,7 +95,6 @@ Irssi::Test::set_window('refnum' => 3, 'type' => 'CHANNEL', 'name' => '#fast_cha
 						'lines' => [[1386447100, 'line1'],
 									[1386447200, 'line2'], [1386447200, 'line3'], [1386447200, 'line4'],
 									[1386447300, 'line5'], [1386447300, 'line6']]);
-
 # getWindows
 is_jrpc('method' => 'getWindows', 'result' => [{
 		'refnum' => 1,
@@ -108,6 +109,10 @@ is_jrpc('method' => 'getWindows', 'result' => [{
 		'type' => 'CHANNEL',
 		'name' => '#channel'
 	}]);
+
+Irssi::Test::set_window('refnum' => 4, 'type' => 'CHANNEL', 'name' => '#non_ascii_channel',
+						'topic' => 'Something non-ascii åäö', 'nicks' => ['nick1'],
+						'lines' => [[1, Encode::encode('utf8', 'åäö')]]);
 
 # getWindow
 is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 1}, 'result' => {
@@ -131,6 +136,8 @@ is_jrpc('method' => 'getWindow', 'params' => {'refnum' => 404}, 'result' => unde
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2}, 'result' => [
 	{'timestamp' => 1, 'text' => 'line1'},
 	{'timestamp' => 2, 'text' => 'line2'}]);
+is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 4}, 'result' => [
+	{'timestamp' => 1, 'text' => 'åäö'}]);
 # Limits
 is_jrpc('method' => 'getWindowLines', 'params' => {'refnum' => 2, 'timestampLimit' => 1},
 		'result' => [{'timestamp' => 2, 'text' => 'line2'}]);
@@ -182,6 +189,8 @@ is_jrpc('method' => 'sendMessage', 'params' => {'refnum' => 2, 'message' => 'hel
 is_commands('refnum' => 2, 'commands' => ['msg * hello']);
 is_jrpc('method' => 'sendMessage', 'params' => {'refnum' => 2, 'message' => ''});
 is_commands('refnum' => 2, 'commands' => []);
+is_jrpc('method' => 'sendMessage', 'params' => {'refnum' => 2, 'message' => 'åäö'});
+is_commands('refnum' => 2, 'commands' => ['msg * åäö']);
 
 
 # Test unloading
