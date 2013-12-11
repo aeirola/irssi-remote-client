@@ -169,7 +169,7 @@ sub getWindow {
 		$window_data{nicks} = \@nicks;
 	}
 
-	$window_data{lines} = $self->getWindowLines('refnum' => $refnum);
+	$window_data{lines} = $self->getWindowLines(@_);
 	return \%window_data;
 }
 
@@ -186,6 +186,7 @@ Names params:
  - timestampLimit (int): Minimum age (in seconds since epoch) of line to return
  - rowLimit (int): Max number of rows to return
  - timeout (int): Number of seconds to wait for lines
+ - colors (bool): Include theme colors or not
 
 Returns: 
 <If no timeout, or lines available>:
@@ -200,6 +201,7 @@ sub getWindowLines {
 	my $timestamp_limit = $args{timestampLimit} || 0;
 	my $row_limit = $args{rowLimit} || 100;
 	my $timeout = $args{timeout};
+	my $colors = $args{colors} || 0;
 
 	my $window = Irssi::window_find_refnum($refnum) or return [];
 	my $view = $window->view;
@@ -253,7 +255,7 @@ sub getWindowLines {
 
 		push(@linesArray, {
 			'timestamp' => $timestamp + ($subsec_index/$SUBEC_RESOLUTION),
-			'text' => Encode::decode('utf8', $ptr->get_text(0)),
+			'text' => Encode::decode('utf8', $ptr->get_text($colors)),
 		});
 		$ptr = $ptr->next();
 		$subsec_index++;

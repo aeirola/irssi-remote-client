@@ -30,7 +30,7 @@ Known issues
 
 Future improvements
 -------------------
-* UTF-8 encoding
+* Link recognition
 * JSON-RPC support on WebSocket
 * More command functionality
  * Topics
