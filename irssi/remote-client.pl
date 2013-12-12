@@ -266,17 +266,21 @@ sub getWindowLines {
 		my $deferred = Irssi::JSON::RPC::DeferredResponse->new();
 		my $event_handler = sub {
 			my ($dest, $text, $formatted_text) = @_;
+
+			# Cleanup resources
+			Irssi::timeout_remove($deferred->{timeout_tag});
+			Irssi::JSON::RPC::EventHandler::remove_text_listener($deferred->{event_tag});
+
 			my $data;
 			if ($dest) {
-				Irssi::timeout_remove($deferred->{timeout_tag});
 				$data = $self->getWindowLines('refnum' => $refnum,
 											  'timestampLimit' => $timestamp_limit,
 											  'rowLimit' => $row_limit);
 			} else {
 				# Timed out, no content
-				Irssi::JSON::RPC::EventHandler::remove_text_listener($deferred->{event_tag});
 				$data = [];
 			}
+
 			my $func = $deferred->{response_handler};
 			&$func($deferred, $data);
 		};
