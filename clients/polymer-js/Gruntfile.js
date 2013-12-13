@@ -177,6 +177,19 @@ module.exports = function (grunt) {
                 }]
             }
         },
+        manifest: {
+            options: {
+                basePath: '<%= yeoman.dist %>',
+                verbose: false,
+                timestamp: true,
+                hash: false
+            },
+            dist: {
+                files: [{
+                    '<%= yeoman.dist %>/manifest.appcache': '{,*/}*.*'
+                }]
+            }
+        },
         bower: {
             all: {
                 rjsConfig: '<%= yeoman.app %>/scripts/main.js'
@@ -215,7 +228,8 @@ module.exports = function (grunt) {
         'cssmin',
         'uglify',
         'copy',
-        'usemin'
+        'usemin',
+        'manifest'
     ]);
 
     grunt.registerTask('default', [
