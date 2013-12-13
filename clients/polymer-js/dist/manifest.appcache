@@ -1,9 +1,10 @@
 CACHE MANIFEST
-# Time: Fri Dec 13 2013 19:51:13 GMT+0200 (EET)
+# Time: Fri Dec 13 2013 20:26:07 GMT+0200 (EET)
 
 CACHE:
 fonts/glyphicons-halflings-regular.woff
 index.html
+index.js
 scripts/script.js
 styles/style.css
 

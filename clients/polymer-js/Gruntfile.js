@@ -156,7 +156,7 @@ module.exports = function (grunt) {
         },
         vulcanize: {
             options: {
-
+                csp: true
             },
             dist: {
                 files: [{
@@ -165,6 +165,11 @@ module.exports = function (grunt) {
                     src: '*.html',
                     dest: '<%= yeoman.dist %>'
                 }]
+            }
+        },
+        uglify: {
+            indexJs: {
+                files: [{'<%= yeoman.dist %>/index.js': '<%= yeoman.dist %>/index.js'}]
             }
         },
         copy: {
