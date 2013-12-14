@@ -85,7 +85,7 @@ lines-element p {
 lines-element p .b {/*bold*/ font-weight: bold;}
 lines-element p .u {/*underline*/ text-decoration: underline;}
 
-lines-element p .c0 {color: #ffffff;}
+lines-element p .c0 {color: #000000;}
 lines-element p .c1 {color: #000000;}
 lines-element p .c2 {color: #0000aa;}
 lines-element p .c3 {color: #00aa00;}
