@@ -30,7 +30,6 @@ Known issues
 
 Future improvements
 -------------------
-* Link recognition
 * JSON-RPC support on WebSocket
 * More command functionality
  * Topics

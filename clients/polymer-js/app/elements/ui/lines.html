@@ -6,9 +6,8 @@
       }
     </style>
 
-    <template repeat="{{line in lines}}">
-      <p>{{line.text}}</p>
-    </template>
+    <div id="lines">
+    </div>
 
     <irssi-rpc-element id="longPolling"
       method="getWindowLines"
@@ -19,7 +18,6 @@
   </template>
   <script>
     Polymer('lines-element', {
-      lines: [],
       rowLimit: 100,
       lastTimestamp: 0,
       pollRequest: null,
@@ -46,18 +44,30 @@
         });
       },
       _setLines: function _setLines(lines) {
-        this.lines = [];
+        document.getElementById('lines').innerHTML = '';
         this._addLines(lines);
       },
       _addLines: function _addLines(lines) {
         if (lines.length > 0) {
+          var linesDiv = document.getElementById('lines');
           var lastLine = lines[lines.length-1];
           this.lastTimestamp = lastLine.timestamp;
-          this.lines = this.lines.concat(lines);
+          var paragraphs = lines.map(function(line) {
+            var p = document.createElement("p");
+            p.innerHTML = this._urlize(line.text);
+            linesDiv.appendChild(p);
+          }, this);
         }
 
         this.async(function() {
           this.scrollTop = this.scrollHeight;
+        });
+      },
+      _urlize: function _urlize(string) {
+        return urlize(string, {
+          target: '_blank',
+          trim_url_limit: 100,
+          django_compatible: false
         });
       }
     });

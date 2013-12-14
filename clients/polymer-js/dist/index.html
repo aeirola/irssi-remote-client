@@ -750,9 +750,8 @@ license that can be found in the LICENSE file.
       }
     </style>
 
-    <template repeat="{{line in lines}}">
-      <p>{{line.text}}</p>
-    </template>
+    <div id="lines">
+    </div>
 
     <irssi-rpc-element id="longPolling" method="getWindowLines" params="{&quot;timestampLimit&quot;: {{lastTimestamp}}, &quot;timeout&quot;: 300}" refnum="" on-polymer-response="{{newLineLoaded}}">
     </irssi-rpc-element>

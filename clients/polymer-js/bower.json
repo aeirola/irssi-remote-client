@@ -1,11 +1,12 @@
 {
-  "name": "js",
-  "version": "0.0.0",
+  "name": "irssi-remote-client",
+  "version": "0.0.1",
   "dependencies": {
     "bootstrap": "~3.0.2",
   	"crypto-js": "http://crypto-js.googlecode.com/files/CryptoJS%20v3.1.2.zip",
     "polymer": "latest",
-    "polymer-elements": "latest"
+    "polymer-elements": "latest",
+    "urlize-js": "https://github.com/ljosa/urlize.js.git"
   },
   "devDependencies": {}
 }
