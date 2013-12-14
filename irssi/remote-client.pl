@@ -275,7 +275,8 @@ sub getWindowLines {
 			if ($dest) {
 				$data = $self->getWindowLines('refnum' => $refnum,
 											  'timestampLimit' => $timestamp_limit,
-											  'rowLimit' => $row_limit);
+											  'rowLimit' => $row_limit,
+											  'colors' => $colors);
 			} else {
 				# Timed out, no content
 				$data = [];
@@ -337,17 +338,16 @@ package Irssi::JSON::RPC::EventHandler;
 our %text_listeners = ();# Stores deferred text events
 
 sub setup {
-	&$outside_call(\&Irssi::signal_add_last, 'print text', \&handle_print_text_event);
+	&$outside_call(\&Irssi::signal_add_last, 'gui print text finished', \&handle_print_text_event);
 }
 
 =pod
 Handles writing of message events to deferred responses
 =cut
 sub handle_print_text_event {
-	#  "print text", TEXT_DEST_REC *dest, char *text, char *stripped
-	my ($dest) = @_;
-
-	my $refnum = $dest->{window}->{refnum};
+	#  "gui print text finished", Window $window
+	my ($window) = @_;
+	my $refnum = $window->{refnum};
 
 	if (defined($text_listeners{$refnum})) {
 		my %window_listeners = %{$text_listeners{$refnum}};
