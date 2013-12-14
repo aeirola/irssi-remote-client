@@ -61,6 +61,47 @@ lines-element p {
 	line-height: 15px;
 }
 
+/* Class explanations
+	b: bold
+	u: underline
+	c0: white
+	c1: black
+	c2: blue
+	c3: green
+	c4: light_red
+	c5: red
+	c6: magenta
+	c7: orange
+	c8: yellow
+	c9: light_green
+	c10: cyan
+	c11: light_cyan
+	c12: light_blue
+	c13: light_magenta
+	c14: gray
+	c15: light_gray
+*/
+
+lines-element p .b {/*bold*/ font-weight: bold;}
+lines-element p .u {/*underline*/ text-decoration: underline;}
+
+lines-element p .c0 {color: #ffffff;}
+lines-element p .c1 {color: #000000;}
+lines-element p .c2 {color: #0000aa;}
+lines-element p .c3 {color: #00aa00;}
+lines-element p .c4 {color: #dd0000;}
+lines-element p .c5 {color: #aa0000;}
+lines-element p .c6 {color: #aa00aa;}
+lines-element p .c7 {color: #aa6500;}
+lines-element p .c8 {color: #aaaa00;}
+lines-element p .c9 {color: #00dd00;}
+lines-element p .c10 {color: #00aaaa;}
+lines-element p .c11 {color: #00dddd;}
+lines-element p .c12 {color: #0000dd;}
+lines-element p .c13 {color: #dd00dd;}
+lines-element p .c14 {color: #444444;}
+lines-element p .c15 {color: #888888;}
+
 input-element {
 	margin-right: 0.5em;
 	font-family: monospace;

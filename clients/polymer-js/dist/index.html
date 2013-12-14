@@ -695,7 +695,7 @@ license that can be found in the LICENSE file.
     </ul>
 
     <irssi-rpc-element id="windowsLoader" method="getWindows" response="{{windows}}"></irssi-rpc-element>
-    <irssi-rpc-element id="windowLoader" method="getWindow" refnum="" response="{{window}}" on-polymer-response="{{windowLoaded}}">
+    <irssi-rpc-element id="windowLoader" method="getWindow" params="{&quot;colors&quot;: true}" refnum="" response="{{window}}" on-polymer-response="{{windowLoaded}}">
     </irssi-rpc-element>
 
     <polymer-signals on-polymer-signal-ready="{{readySignal}}"></polymer-signals>
@@ -753,7 +753,7 @@ license that can be found in the LICENSE file.
     <div id="lines">
     </div>
 
-    <irssi-rpc-element id="longPolling" method="getWindowLines" params="{&quot;timestampLimit&quot;: {{lastTimestamp}}, &quot;timeout&quot;: 300}" refnum="" on-polymer-response="{{newLineLoaded}}">
+    <irssi-rpc-element id="longPolling" method="getWindowLines" params="{&quot;timestampLimit&quot;: {{lastTimestamp}}, &quot;timeout&quot;: 300, &quot;colors&quot;: true}" refnum="" on-polymer-response="{{newLineLoaded}}">
     </irssi-rpc-element>
     <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
   </template>

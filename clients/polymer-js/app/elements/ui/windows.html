@@ -11,7 +11,7 @@
     <irssi-rpc-element id="windowsLoader" method="getWindows" response="{{windows}}"></irssi-rpc-element>
     <irssi-rpc-element id="windowLoader" 
         method="getWindow"
-        refnum
+        params='{"colors": true}' refnum
         response="{{window}}"
         on-polymer-response="{{windowLoaded}}">
     </irssi-rpc-element>

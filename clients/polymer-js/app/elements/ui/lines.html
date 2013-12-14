@@ -11,7 +11,7 @@
 
     <irssi-rpc-element id="longPolling"
       method="getWindowLines"
-      params='{"timestampLimit": {{lastTimestamp}}, "timeout": 300}' refnum
+      params='{"timestampLimit": {{lastTimestamp}}, "timeout": 300, "colors": true}' refnum
       on-polymer-response="{{newLineLoaded}}">
     </irssi-rpc-element>
     <polymer-signals on-polymer-signal-window-changed="{{windowChangedSignal}}"></polymer-signals>
@@ -53,9 +53,7 @@
           var lastLine = lines[lines.length-1];
           this.lastTimestamp = lastLine.timestamp;
           var paragraphs = lines.map(function(line) {
-            var p = document.createElement("p");
-            p.innerHTML = this._urlize(line.text);
-            linesDiv.appendChild(p);
+            linesDiv.appendChild(this._makeParagraph(line));
           }, this);
         }
 
@@ -63,12 +61,52 @@
           this.scrollTop = this.scrollHeight;
         });
       },
-      _urlize: function _urlize(string) {
-        return urlize(string, {
+      _colorMapping: {
+        '?': '0',
+        '0': '1',
+        '1': '2',
+        '2': '3',
+        '<': '4',
+        '4': '5',
+        '5': '6',
+        '6': '7',
+        '>' : '8',
+        ':': '9',
+        '3': '10',
+        ';': '11',
+        '9': '12',
+        '=': '13',
+        '8': '14',
+        '7': '15'
+      },
+      _startColorRegex: new RegExp('\u0004([^�])\/', 'g'),
+      _endColorRegex: new RegExp('\u0004�\/', 'g'),
+      _boldRegex: new RegExp('\u0004c([^\u0004]*)\u0004c', 'g'),
+      _underlineRegex: new RegExp('\u001f([^\u001f]*)\u001f', 'g'),
+      _unusedRegex: new RegExp('\u0004e|\u0016', 'g'), /* clear_formating, invert_colors */
+      _makeParagraph: function _makeParagraph(line) {
+        var p = document.createElement("p");
+        var string = line.text;
+
+        // Handle colors
+        var self = this;
+        string = string.replace(this._startColorRegex, function(_, p1) {
+          return '<span class="c'+self._colorMapping[p1]+'">';});
+        string = string.replace(this._endColorRegex, '</span>');
+        string = string.replace(this._boldRegex, '<span class="b">$1</span>');
+        string = string.replace(this._underlineRegex, '<span class="u">$1</span>');
+        string = string.replace(this._unusedRegex, '');
+
+        // Handle urls
+        string = urlize(string, {
           target: '_blank',
           trim_url_limit: 100,
           django_compatible: false
         });
+
+
+        p.innerHTML = string;
+        return p;
       }
     });
   </script>
