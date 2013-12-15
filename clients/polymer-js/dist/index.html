@@ -16,6 +16,7 @@
         
         
         
+        
 
         
 
@@ -30,9 +31,15 @@
         
         
     
-<script src="index.js"></script>
 </head>
     <body><!--
+ Copyright 2013 The Polymer Authors. All rights reserved.
+ Use of this source code is governed by a BSD-style
+ license that can be found in the LICENSE file.
+-->
+
+<!-- <link rel="import" href="../polymer-dev/polymer.html"> -->
+<!--
 Copyright 2013 The Polymer Authors. All rights reserved.
 Use of this source code is governed by a BSD-style
 license that can be found in the LICENSE file.
@@ -53,13 +60,13 @@ license that can be found in the LICENSE file.
  * @class polymer-xhr
  */
 -->
-<polymer-element name="polymer-xhr" assetpath="../app/bower_components/polymer-elements/polymer-ajax/">
+
+
+<polymer-element name="polymer-xhr" assetpath="../app/bower_components/polymer-ajax/">
   <template>
     <style>
-      @host {
-        * {
-          display: none;
-        }
+      :host {
+        display: none;
       }
     </style>
   </template>
@@ -71,7 +78,9 @@ Copyright 2013 The Polymer Authors. All rights reserved.
 Use of this source code is governed by a BSD-style
 license that can be found in the LICENSE file.
 -->
-<polymer-element name="polymer-signals" assetpath="../app/bower_components/polymer-elements/polymer-signals/">
+
+
+<polymer-element name="polymer-signals" assetpath="../app/bower_components/polymer-signals/">
   
 </polymer-element>
 
@@ -104,13 +113,13 @@ license that can be found in the LICENSE file.
  * @event polymer-localstorage-load
  */
 -->
-<polymer-element name="polymer-localstorage" attributes="name value useRaw autoSaveDisabled" assetpath="../app/bower_components/polymer-elements/polymer-localstorage/">
+
+
+<polymer-element name="polymer-localstorage" attributes="name value useRaw autoSaveDisabled" assetpath="../app/bower_components/polymer-localstorage/">
   <template>
     <style>
-      @host {
-        * {
-          display: none;
-        }
+      :host {
+        display: none;
       }
     </style>
   </template>
@@ -216,7 +225,9 @@ license that can be found in the LICENSE file.
  * @default false
  */
 -->
-<polymer-element name="polymer-flex-layout" attributes="vertical align justify isContainer" assetpath="../app/bower_components/polymer-elements/polymer-flex-layout/">
+
+
+<polymer-element name="polymer-flex-layout" attributes="vertical align justify isContainer" assetpath="../app/bower_components/polymer-flex-layout/">
   <template>
     <style polymer-scope="controller">/*
 Copyright 2013 The Polymer Authors. All rights reserved.
@@ -321,86 +332,84 @@ license that can be found in the LICENSE file.
   justify-content: space-between;
 }
 
-@host {
-  .flexbox, [flexbox], [h-flexbox], [v-flexbox] {
-    display: -webkit-box !important;
-    display: -ms-flexbox !important;
-    display: -moz-flex !important;
-    display: -webkit-flex !important;
-    display: flex !important;
-  }
+:host(.flexbox:host, [flexbox]:host, [h-flexbox]:host, [v-flexbox]:host) {
+  display: -webkit-box !important;
+  display: -ms-flexbox !important;
+  display: -moz-flex !important;
+  display: -webkit-flex !important;
+  display: flex !important;
+}
   
-  .flexbox.row, [flexbox], [h-flexbox] {
-    -webkit-box-orient: horizontal;
-    -ms-flex-direction: row;
-    -moz-flex-direction: row;
-    -webkit-flex-direction: row;
-    flex-direction: row;
-  }
+:host(.flexbox.row:host, [flexbox]:host, [h-flexbox]:host) {
+  -webkit-box-orient: horizontal;
+  -ms-flex-direction: row;
+  -moz-flex-direction: row;
+  -webkit-flex-direction: row;
+  flex-direction: row;
+}
   
-  .flexbox.column, [v-flexbox] {
-    -webkit-box-orient: vertical;
-    -ms-flex-direction: column;
-    -moz-flex-direction: column;
-    -webkit-flex-direction: column;
-    flex-direction: column;
-  }
+:host(.flexbox.column:host, [v-flexbox]:host) {
+  -webkit-box-orient: vertical;
+  -ms-flex-direction: column;
+  -moz-flex-direction: column;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
   
-  .flexbox.align-start {
-    -webkit-box-align: start;
-    -ms-flex-align: start;
-    -moz-align-items: flex-start;
-    -webkit-align-items: flex-start;
-    align-items: flex-start;
-  }
+:host(.flexbox.align-start:host) {
+  -webkit-box-align: start;
+  -ms-flex-align: start;
+  -moz-align-items: flex-start;
+  -webkit-align-items: flex-start;
+  align-items: flex-start;
+}
   
-  .flexbox.align-end {
-    -webkit-box-align: end;
-    -ms-flex-align: end;
-    -moz-align-items: flex-end;
-    -webkit-align-items: flex-end;
-    align-items: flex-end;
-  }
-  
-  .flexbox.align-center {
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    -moz-align-items: center;
-    -webkit-align-items: center;
-    align-items: center;
-  }
-  
-  .flexbox.justify-start {
-    -webkit-box-pack: start;
-    -ms-flex-pack: start;
-    -moz-justify-content: flex-start;
-    -webkit-justify-content: flex-start;
-    justify-content: flex-start;
-  }
-  
-  .flexbox.justify-end {
-    -webkit-box-pack: end;
-    -ms-flex-pack: end;
-    -moz-justify-content: flex-end;
-    -webkit-justify-content: flex-end;
-    justify-content: flex-end;
-  }
-  
-  .flexbox.justify-center {
-    -webkit-box-pack: center;
-    -ms-flex-pack: center;
-    -moz-justify-content: center;
-    -webkit-justify-content: center;
-    justify-content: center;
-  }
-  
-  .flexbox.justify-between {
-    -webkit-box-pack: justify;
-    -ms-flex-pack: justify;
-    -moz-justify-content: space-between;
-    -webkit-justify-content: space-between;
-    justify-content: space-between;
-  }
+:host(.flexbox.align-end:host) {
+  -webkit-box-align: end;
+  -ms-flex-align: end;
+  -moz-align-items: flex-end;
+  -webkit-align-items: flex-end;
+  align-items: flex-end;
+}
+
+:host(.flexbox.align-center:host) {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  -moz-align-items: center;
+  -webkit-align-items: center;
+  align-items: center;
+}
+
+:host(.flexbox.justify-start:host) {
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  -moz-justify-content: flex-start;
+  -webkit-justify-content: flex-start;
+  justify-content: flex-start;
+}
+
+:host(.flexbox.justify-end:host) {
+  -webkit-box-pack: end;
+  -ms-flex-pack: end;
+  -moz-justify-content: flex-end;
+  -webkit-justify-content: flex-end;
+  justify-content: flex-end;
+}
+
+:host(.flexbox.justify-center:host) {
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  -moz-justify-content: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+
+:host(.flexbox.justify-between:host) {
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  -moz-justify-content: space-between;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
 }
 </style>
     <style>/*
@@ -506,86 +515,84 @@ license that can be found in the LICENSE file.
   justify-content: space-between;
 }
 
-@host {
-  .flexbox, [flexbox], [h-flexbox], [v-flexbox] {
-    display: -webkit-box !important;
-    display: -ms-flexbox !important;
-    display: -moz-flex !important;
-    display: -webkit-flex !important;
-    display: flex !important;
-  }
+:host(.flexbox:host, [flexbox]:host, [h-flexbox]:host, [v-flexbox]:host) {
+  display: -webkit-box !important;
+  display: -ms-flexbox !important;
+  display: -moz-flex !important;
+  display: -webkit-flex !important;
+  display: flex !important;
+}
   
-  .flexbox.row, [flexbox], [h-flexbox] {
-    -webkit-box-orient: horizontal;
-    -ms-flex-direction: row;
-    -moz-flex-direction: row;
-    -webkit-flex-direction: row;
-    flex-direction: row;
-  }
+:host(.flexbox.row:host, [flexbox]:host, [h-flexbox]:host) {
+  -webkit-box-orient: horizontal;
+  -ms-flex-direction: row;
+  -moz-flex-direction: row;
+  -webkit-flex-direction: row;
+  flex-direction: row;
+}
   
-  .flexbox.column, [v-flexbox] {
-    -webkit-box-orient: vertical;
-    -ms-flex-direction: column;
-    -moz-flex-direction: column;
-    -webkit-flex-direction: column;
-    flex-direction: column;
-  }
+:host(.flexbox.column:host, [v-flexbox]:host) {
+  -webkit-box-orient: vertical;
+  -ms-flex-direction: column;
+  -moz-flex-direction: column;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+}
   
-  .flexbox.align-start {
-    -webkit-box-align: start;
-    -ms-flex-align: start;
-    -moz-align-items: flex-start;
-    -webkit-align-items: flex-start;
-    align-items: flex-start;
-  }
+:host(.flexbox.align-start:host) {
+  -webkit-box-align: start;
+  -ms-flex-align: start;
+  -moz-align-items: flex-start;
+  -webkit-align-items: flex-start;
+  align-items: flex-start;
+}
   
-  .flexbox.align-end {
-    -webkit-box-align: end;
-    -ms-flex-align: end;
-    -moz-align-items: flex-end;
-    -webkit-align-items: flex-end;
-    align-items: flex-end;
-  }
-  
-  .flexbox.align-center {
-    -webkit-box-align: center;
-    -ms-flex-align: center;
-    -moz-align-items: center;
-    -webkit-align-items: center;
-    align-items: center;
-  }
-  
-  .flexbox.justify-start {
-    -webkit-box-pack: start;
-    -ms-flex-pack: start;
-    -moz-justify-content: flex-start;
-    -webkit-justify-content: flex-start;
-    justify-content: flex-start;
-  }
-  
-  .flexbox.justify-end {
-    -webkit-box-pack: end;
-    -ms-flex-pack: end;
-    -moz-justify-content: flex-end;
-    -webkit-justify-content: flex-end;
-    justify-content: flex-end;
-  }
-  
-  .flexbox.justify-center {
-    -webkit-box-pack: center;
-    -ms-flex-pack: center;
-    -moz-justify-content: center;
-    -webkit-justify-content: center;
-    justify-content: center;
-  }
-  
-  .flexbox.justify-between {
-    -webkit-box-pack: justify;
-    -ms-flex-pack: justify;
-    -moz-justify-content: space-between;
-    -webkit-justify-content: space-between;
-    justify-content: space-between;
-  }
+:host(.flexbox.align-end:host) {
+  -webkit-box-align: end;
+  -ms-flex-align: end;
+  -moz-align-items: flex-end;
+  -webkit-align-items: flex-end;
+  align-items: flex-end;
+}
+
+:host(.flexbox.align-center:host) {
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  -moz-align-items: center;
+  -webkit-align-items: center;
+  align-items: center;
+}
+
+:host(.flexbox.justify-start:host) {
+  -webkit-box-pack: start;
+  -ms-flex-pack: start;
+  -moz-justify-content: flex-start;
+  -webkit-justify-content: flex-start;
+  justify-content: flex-start;
+}
+
+:host(.flexbox.justify-end:host) {
+  -webkit-box-pack: end;
+  -ms-flex-pack: end;
+  -moz-justify-content: flex-end;
+  -webkit-justify-content: flex-end;
+  justify-content: flex-end;
+}
+
+:host(.flexbox.justify-center:host) {
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  -moz-justify-content: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+
+:host(.flexbox.justify-between:host) {
+  -webkit-box-pack: justify;
+  -ms-flex-pack: justify;
+  -moz-justify-content: space-between;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
 }
 </style>
     <content></content>
@@ -799,5 +806,7 @@ license that can be found in the LICENSE file.
 </polymer-element>
 
         <remote-client-element></remote-client-element>
-    </body>
+    
+<script src="index.js"></script>
+</body>
 </html>

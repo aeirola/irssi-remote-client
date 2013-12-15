@@ -3,9 +3,12 @@
   "version": "0.0.1",
   "dependencies": {
     "bootstrap": "~3.0.2",
-  	"crypto-js": "http://crypto-js.googlecode.com/files/CryptoJS%20v3.1.2.zip",
     "polymer": "latest",
-    "polymer-elements": "latest",
+    "polymer-ajax": "latest",
+    "polymer-signals": "latest",
+    "polymer-localstorage": "latest",
+    "polymer-flex-layout": "latest",
+    "crypto-js": "http://crypto-js.googlecode.com/files/CryptoJS%20v3.1.2.zip",
     "urlize-js": "https://github.com/ljosa/urlize.js.git"
   },
   "devDependencies": {}
