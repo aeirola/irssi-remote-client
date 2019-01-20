@@ -9,7 +9,7 @@
 
         <link rel="stylesheet" href="styles/style.css">
 
-        <script src="scripts/script.js"></script>
+
 
         <!-- Place your HTML imports here -->
         
@@ -33,12 +33,30 @@
     
 </head>
     <body><!--
- Copyright 2013 The Polymer Authors. All rights reserved.
- Use of this source code is governed by a BSD-style
- license that can be found in the LICENSE file.
+Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
 -->
 
-<!-- <link rel="import" href="../polymer-dev/polymer.html"> -->
+<polymer-element name="polymer-body" extends="body" assetpath="../app/bower_components/polymer/">
+
+</polymer-element>
+<!--
+Copyright (c) 2014 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+
+
+
+<!--<link rel="import" href="../polymer-dev/polymer.html">--> 
 <!--
 Copyright 2013 The Polymer Authors. All rights reserved.
 Use of this source code is governed by a BSD-style
@@ -94,7 +112,7 @@ license that can be found in the LICENSE file.
  * @module Polymer Elements
  */
 /**
- * polymer-localstorage provides access to localStorage.  The "name" property
+ * Element access to localStorage.  The "name" property
  * is the key to the data ("value" property) stored in localStorage.
  *
  * polymer-localstorage automatically saves the value to localStorage when
@@ -106,6 +124,11 @@ license that can be found in the LICENSE file.
  *     <polymer-localstorage name="my-app-storage" value="{{value}}"></polymer-localstorage>
  *
  * @class polymer-localstorage
+ * @blurb Element access to localStorage.
+ * @snap http://polymer.github.io/polymer-localstorage/snap.png
+ * @author The Polymer Authors
+ * @categories Data
+ *
  */
 /**
  * Fired after it is loaded from localStorage.
@@ -266,9 +289,9 @@ license that can be found in the LICENSE file.
   flex: 1;
 }
 
-::-webkit-distributed(.flex), 
-::-webkit-distributed([flex]),
-::-webkit-distributed([fit]) {
+::content > .flex, 
+::content > [flex],
+::content > [fit] {
   -webkit-box-flex: 1;
   -ms-flex: 1;
   -moz-flex: 1;
@@ -449,9 +472,9 @@ license that can be found in the LICENSE file.
   flex: 1;
 }
 
-::-webkit-distributed(.flex), 
-::-webkit-distributed([flex]),
-::-webkit-distributed([fit]) {
+::content > .flex, 
+::content > [flex],
+::content > [fit] {
   -webkit-box-flex: 1;
   -ms-flex: 1;
   -moz-flex: 1;
@@ -792,12 +815,12 @@ license that can be found in the LICENSE file.
       }
     </style>
     <p>
-      <form on-submit="{{sendLine}}">
+      </p><form on-submit="{{sendLine}}">
         <polymer-flex-layout></polymer-flex-layout>
-        <input id="line" name="line" type="text" autocomplete="off" autofocus="" spellcheck="true" class="form-control" flex="">
+        <input id="line" name="line" type="text" autocomplete="off" autofocus spellcheck="true" class="form-control" flex="">
         <button class="btn btn-primary"><span class="glyphicon glyphicon-arrow-right"></span></button>
       </form>
-    </p>
+    <p></p>
 
     <irssi-rpc-element renfum="" id="rpc" method="sendMessage" params="{&quot;message&quot;: &quot;{{line}}&quot;}" refnum="" response="{{lines}}" on-polymer-response="{{linesLoaded}}">
     </irssi-rpc-element>

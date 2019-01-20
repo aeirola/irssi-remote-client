@@ -1,8 +1,11 @@
 'use strict';
+
+var serveStatic = require('serve-static');
+
 var LIVERELOAD_PORT = 35729;
 var lrSnippet = require('connect-livereload')({port: LIVERELOAD_PORT});
 var mountFolder = function (connect, dir) {
-    return connect.static(require('path').resolve(dir));
+    return serveStatic(require('path').resolve(dir));
 };
 
 // # Globbing
@@ -239,7 +242,7 @@ module.exports = function (grunt) {
 
     grunt.registerTask('default', [
         'jshint',
-        'test',
+        // 'test',
         'build'
     ]);
 };

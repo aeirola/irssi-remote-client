@@ -2,14 +2,19 @@
   "name": "irssi-remote-client",
   "version": "0.0.1",
   "dependencies": {
-    "bootstrap": "~3.0.2",
-    "polymer": "latest",
-    "polymer-ajax": "latest",
-    "polymer-signals": "latest",
-    "polymer-localstorage": "latest",
-    "polymer-flex-layout": "latest",
-    "crypto-js": "http://crypto-js.googlecode.com/files/CryptoJS%20v3.1.2.zip",
-    "urlize-js": "https://github.com/ljosa/urlize.js.git"
+    "bootstrap": "3.0.3",
+    "polymer": "0.2.4",
+    "polymer-ajax": "https://github.com/googlearchive/polymer-ajax.git#0.3.0",
+    "polymer-signals": "https://github.com/googlearchive/polymer-signals.git#0.3.0",
+    "polymer-localstorage": "https://github.com/googlearchive/polymer-localstorage.git#0.3.0",
+    "polymer-flex-layout": "https://github.com/googlearchive/polymer-flex-layout.git#0.3.0",
+    "cryptojslib": "3.1.2",
+    "urlize-js": "https://github.com/ljosa/urlize.js.git#1.0.2"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "resolutions": {
+    "core-component-page": "0.2.4",
+    "platform": "0.2.4",
+    "polymer": "0.2.4"
+  }
 }
